@@ -7,5 +7,5 @@ Flask-CORS==3.0.10
 textblob==0.15.3
 PyMySQL==1.0.2
 boto3==1.18.50  # Add the latest version of boto3
-Werkzeug==2.0.3  # specify specific version to avoid latest dependency issue
-cryptography==40.0.2  # to avoid cryptography error
+Werkzeug==2.2.2  # specify specific version to avoid latest dependency issue
+cryptography==41.0.5  # to avoid cryptography error
