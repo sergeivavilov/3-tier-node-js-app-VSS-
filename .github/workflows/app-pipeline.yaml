@@ -1,0 +1,62 @@
+name: "Reviews App CI/CD Pipeline"
+
+on:
+  push:
+    branches:
+      - main
+      - staging
+      - 'feature/**'
+
+permissions:
+  id-token: write # Required for OIDC (OpenID Connect)
+  contents: read  # Required for actions/checkout
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    environment: dev
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v3
+      with:
+        role-to-assume: ${{ secrets.AWS_IAM_ROLE }} # Assuming the role ARN is stored in GitHub secrets
+        role-session-name: githubactionssession
+        aws-region: us-east-1
+
+    - name: Login to ECR
+      id: login-to-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Build, tag, and push Backend docker image to Amazon ECR
+      env:
+        REGISTRY: ${{ steps.login-to-ecr.outputs.registry }}
+        REPOSITORY: reviews-backend
+        IMAGE_TAG: ${{ github.sha }}
+      working-directory: ./api-backend/
+      run: |
+        docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
+        docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+
+    - name: Build, tag, and push Frontend docker image to Amazon ECR
+      env:
+        REGISTRY: ${{ steps.login-to-ecr.outputs.registry }}
+        REPOSITORY: reviews-frontend
+        IMAGE_TAG: ${{ github.sha }}
+      working-directory: ./frontend/
+      run: |
+        docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
+        docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+
+    - name: Deploy to Kubernetes using Helm
+      run: |
+        helm upgrade --install reviews-backend helm/reviews-backend --namespace default \
+          --set image.repository=$REGISTRY/$REPOSITORY \
+          --set image.tag=$IMAGE_TAG
+        helm upgrade --install reviews-frontend helm/reviews-frontend --namespace default \
+          --set image.repository=$REGISTRY/$REPOSITORY \
+          --set image.tag=$IMAGE_TAG
+
