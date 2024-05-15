@@ -1,3 +1,18 @@
+
+
+================================================================================================================================================================
+{   
+  echo "Directory Structure:";
+  tree;
+  echo "";
+
+  # Loop through each text-based file including YAML files and print its contents
+  find . -type f \( -name "*.md" -o -name "*.py" -o -name "*.sql" -o -name "*.js" -o -name "*.html" -o -name "*.css" -o -name "*.yaml" \) -print -exec echo "Contents of {}:" \; -exec cat {} \; -exec echo "" \;
+} > all_project_contents.txt
+
+================================================================================================================================================================
+
+
 # 3-Tier Application: Product Review System
 
 ## Overview
