@@ -1,132 +1,60 @@
-# name: "Reviews App CI/CD Pipeline"
+name: "Reviews App CI/CD Pipeline"
 
-# on:
-#   push:
-#     branches:
-#       - main
-#       - staging
-#       - 'feature/**'
+on:
+  push:
+    branches: [ "main", "feature/*", "staging" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
 
-# permissions:
-#   id-token: write # Required for OIDC (OpenID Connect)
-#   contents: read  # Required for actions/checkout
+permissions:
+  id-token: write  # Necessary for OIDC that allows GitHub Actions to assume an AWS IAM role
+  contents: read   # Allows the workflow to access the content of the repository
 
-# jobs:
-#   build-deploy:
-#     runs-on: ubuntu-latest
-#     environment: dev
+env: 
+  # Dynamically set the environment stage based on the branch
+  ENVIRONMENT_STAGE: ${{ (github.ref == 'refs/heads/main' && 'production') || (github.ref == 'refs/heads/staging' && 'staging') || 'dev' }}
 
-#     steps:
-#     - name: Checkout Repository
-#       uses: actions/checkout@v4
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # Environment name is dynamically set based on the branch, used in steps and scripts
+    environment: ${{ env.ENVIRONMENT_STAGE }}
 
-#     - name: Configure AWS credentials
-#       uses: aws-actions/configure-aws-credentials@v3
-#       with:
-#         role-to-assume: ${{ secrets.AWS_IAM_ROLE }} # Assuming the role ARN is stored in GitHub secrets
-#         role-session-name: githubactionssession
-#         aws-region: us-east-1
+    defaults:
+      run:
+        working-directory: ./roots/main-eks-root/  # Default working directory for all run commands
+        shell: bash  # Default shell for all run commands
 
-#     - name: Login to ECR
-#       id: login-to-ecr
-#       uses: aws-actions/amazon-ecr-login@v2
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4  # Checks out the repository under $GITHUB_WORKSPACE, so your workflow can access it
 
-#     - name: Build, tag, and push Backend docker image to Amazon ECR
-#       env:
-#         REGISTRY: ${{ steps.login-to-ecr.outputs.registry }}
-#         REPOSITORY: reviews-backend
-#         IMAGE_TAG: ${{ github.sha }}
-#       working-directory: ./api-backend/
-#       run: |
-#         docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
-#         docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+      - name: Login to AWS
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: ${{ secrets.IAM_ROLE }}
+          role-session-name: githubactionssession  # Ensures a unique session name
+          aws-region: us-east-1  # Specifies the AWS region for the actions
 
-#     - name: Build, tag, and push Frontend docker image to Amazon ECR
-#       env:
-#         REGISTRY: ${{ steps.login-to-ecr.outputs.registry }}
-#         REPOSITORY: reviews-frontend
-#         IMAGE_TAG: ${{ github.sha }}
-#       working-directory: ./frontend/
-#       run: |
-#         docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
-#         docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+      - name: Initialize Terraform
+        run: terraform init  # Initializes a Terraform working directory by configuring the backend and installing plugins
 
-#     - name: Deploy to Kubernetes using Helm
-#       run: |
-#         helm upgrade --install reviews-backend helm/reviews-backend --namespace default \
-#           --set image.repository=$REGISTRY/$REPOSITORY \
-#           --set image.tag=$IMAGE_TAG
-#         helm upgrade --install reviews-frontend helm/reviews-frontend --namespace default \
-#           --set image.repository=$REGISTRY/$REPOSITORY \
-#           --set image.tag=$IMAGE_TAG
+      - name: Plan Infrastructure
+        run: terraform plan -input=false -var-file="project-x-${{ env.ENVIRONMENT_STAGE }}.tfvars"
+        # Outputs the changes that Terraform plans to make to your infrastructure, allowing for manual review
+
+      # - name: Deploy Infrastructure
+      #   run: terraform apply -input=false -auto-approve -var-file="project-x-${{ env.ENVIRONMENT_STAGE }}.tfvars"
+      #   # Applies the Terraform configuration, automatically approving changes to reduce manual intervention
+
+      # - name: Configure Kubernetes context
+      #   run: aws eks update-kubeconfig --name project-x-${{ env.ENVIRONMENT_STAGE }}
+      #   # Configures kubectl to use a specific EKS cluster by updating the kubeconfig file
+
+      # - name: Apply Kubernetes configuration
+      #   run: kubectl apply -f kubernetes-config/aws-auth-cm.yaml
+      #   working-directory: ./kubernetes-resources/
+      #   # Applies a new configuration to a resource by filename or stdin, creating and updating resources in Kubernetes
 
 
-
-
-
-
-
-
-
-
-
-# # # name of the Workflow
-# # name: "Reviews App CI/CD Pipeline"
-
-# # # define triggers
-# # on:
-# #   push:
-# #     branches:
-# #     - main
-# #     - staging
-# #     - 'feature/**'
-
-# # permissions:
-# #   id-token: write # This is required for requesting the JWT
-# #   contents: read  # This is required for actions/checkout
-
-# # jobs:
-# #   # name of the job
-# #   build-deploy:
-# #     # where to run the job, if GHA runner - just specify image name
-# #     runs-on: ubuntu-latest
-# #     environment: dev
-
-# #     # any instructions to execute
-# #     steps:
-# #     - name: Checkout Repository
-# #       # "uses" allows you to specify ready action names
-# #       uses: actions/checkout@v4
-
-# #     - name: Login to AWS
-# #       uses: aws-actions/configure-aws-credentials@v3
-# #       with:
-# #         role-to-assume: ${{ vars.IAM_ROLE }}
-# #         role-session-name: githubactionssession
-# #         aws-region: "us-east-1"
-
-# #     - name: Login to ECR
-# #       id: login-to-ecr
-# #       uses: aws-actions/amazon-ecr-login@v2
-
-# #     - name: Build, tag, and push Backend docker image to Amazon ECR
-# #       env:
-# #         REGISTRY: ${{ steps.login-to-ecr.outputs.registry }}
-# #         REPOSITORY: reviews-backend
-# #         IMAGE_TAG: 0.1
-# #       working-directory: ./api-backend/
-# #       run: |
-# #         docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
-# #         docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
-
-# #     - name: Build, tag, and push Frontend docker image to Amazon ECR
-# #       env:
-# #         REGISTRY: ${{ steps.login-to-ecr.outputs.registry }}
-# #         REPOSITORY: reviews-frontend
-# #         IMAGE_TAG: 0.1
-# #       working-directory: ./frontend/
-# #       run: |
-# #         docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
-# #         docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
-
-# #     # step 5 - deploy image to Kubernetes
