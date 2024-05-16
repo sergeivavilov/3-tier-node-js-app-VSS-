@@ -2,59 +2,61 @@ name: "Reviews App CI/CD Pipeline"
 
 on:
   push:
-    branches: [ "main", "feature/*", "staging" ]
-  pull_request:
-    branches: [ "main" ]
+    branches:
+      - main
+      - staging
+      - 'feature/**'
   workflow_dispatch:
 
 permissions:
-  id-token: write  # Necessary for OIDC that allows GitHub Actions to assume an AWS IAM role
-  contents: read   # Allows the workflow to access the content of the repository
-
-env: 
-  # Dynamically set the environment stage based on the branch
-  ENVIRONMENT_STAGE: ${{ (github.ref == 'refs/heads/main' && 'production') || (github.ref == 'refs/heads/staging' && 'staging') || 'dev' }}
+  id-token: write  # Required for OIDC authentication, enabling GitHub Actions to assume an AWS IAM role
+  contents: read   # Allows GitHub Actions to check out the code
 
 jobs:
-  deploy:
+  build-deploy:
     runs-on: ubuntu-latest
-    # Environment name is dynamically set based on the branch, used in steps and scripts
-    environment: ${{ env.ENVIRONMENT_STAGE }}
-
-    defaults:
-      run:
-        working-directory: ./roots/main-eks-root/  # Default working directory for all run commands
-        shell: bash  # Default shell for all run commands
+    environment: ${{ (github.ref == 'refs/heads/main' && 'production') || (github.ref == 'refs/heads/staging' && 'staging') || 'dev' }}
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4  # Checks out the repository under $GITHUB_WORKSPACE, so your workflow can access it
+      - name: Checkout Repository
+        uses: actions/checkout@v4  # Checks out the repo to $GITHUB_WORKSPACE for the workflow to access
 
-      - name: Login to AWS
+      - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v3
         with:
-          role-to-assume: ${{ secrets.IAM_ROLE }}
-          role-session-name: githubactionssession  # Ensures a unique session name
-          aws-region: us-east-1  # Specifies the AWS region for the actions
+          role-to-assume: ${{ secrets.AWS_IAM_ROLE }}
+          role-session-name: githubactionssession
+          aws-region: us-east-1  # Defines the AWS region for the deployment
 
-      - name: Initialize Terraform
-        run: terraform init  # Initializes a Terraform working directory by configuring the backend and installing plugins
+      - name: Login to Amazon ECR
+        id: login-to-ecr
+        uses: aws-actions/amazon-ecr-login@v2  # Authenticates to Amazon ECR to allow subsequent Docker commands
 
-      - name: Plan Infrastructure
-        run: terraform plan -input=false -var-file="project-x-${{ env.ENVIRONMENT_STAGE }}.tfvars"
-        # Outputs the changes that Terraform plans to make to your infrastructure, allowing for manual review
-
-      # - name: Deploy Infrastructure
-      #   run: terraform apply -input=false -auto-approve -var-file="project-x-${{ env.ENVIRONMENT_STAGE }}.tfvars"
-      #   # Applies the Terraform configuration, automatically approving changes to reduce manual intervention
-
-      # - name: Configure Kubernetes context
-      #   run: aws eks update-kubeconfig --name project-x-${{ env.ENVIRONMENT_STAGE }}
-      #   # Configures kubectl to use a specific EKS cluster by updating the kubeconfig file
-
-      # - name: Apply Kubernetes configuration
-      #   run: kubectl apply -f kubernetes-config/aws-auth-cm.yaml
-      #   working-directory: ./kubernetes-resources/
-      #   # Applies a new configuration to a resource by filename or stdin, creating and updating resources in Kubernetes
-
-
+      - name: Terraform Plan Only
+        run: |
+          # Initialize Terraform
+          terraform init
+          # Output the execution plan but do not apply changes
+          terraform plan
+        # The following steps are commented out to prevent any changes to your AWS infrastructure
+        # - name: Build and Push Docker Images
+        #   env:
+        #     REGISTRY: ${{ steps.login-to-ecr.outputs.registry }}
+        #   run: |
+        #     # Build and push the Backend Docker image
+        #     docker build -t $REGISTRY/reviews-backend:${{ github.sha }} -f Dockerfile.backend .
+        #     docker push $REGISTRY/reviews-backend:${{ github.sha }}
+        #     
+        #     # Build and push the Frontend Docker image
+        #     docker build -t $REGISTRY/reviews-frontend:${{ github.sha }} -f Dockerfile.frontend .
+        #     docker push $REGISTRY/reviews-frontend:${{ github.sha }}
+        #
+        # - name: Deploy to Kubernetes
+        #   run: |
+        #     # Update the Helm charts for both backend and frontend
+        #     helm upgrade --install reviews-backend helm/reviews-backend --namespace default \
+        #       --set image.repository=$REGISTRY/reviews-backend \
+        #       --set image.tag=${{ github.sha }}
+        #     helm upgrade --install reviews-frontend helm/reviews-frontend --namespace default \
+        #       --set image.repository=$REGISTRY/reviews-frontend \
+        #       --set image.tag=${{ github.sha }}
