@@ -1,51 +1,59 @@
-# name: NodeJS Application CI/CD Pipeline
+name: "Reviews App CI/CD Pipeline"
 
-# on:
-#   push:
-#     branches:
-#       - main
-#       - staging
-#       - 'feature/**'
+on:
+  push:
+    branches: [ "main", "feature/*", "staging" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
 
-# jobs:
-#   build-and-deploy:
-#     runs-on: ubuntu-latest
-#     environment: dev
+permissions:
+  id-token: write  # Necessary for OIDC that allows GitHub Actions to assume an AWS IAM role
+  contents: read   # Allows the workflow to access the content of the repository
 
-#     steps:
-#       - name: Checkout code
-#         uses: actions/checkout@v3
+env: 
+  # Dynamically set the environment stage based on the branch
+  ENVIRONMENT_STAGE: ${{ (github.ref == 'refs/heads/main' && 'production') || (github.ref == 'refs/heads/staging' && 'staging') || 'dev' }}
 
-#       - name: Set up AWS credentials
-#         uses: aws-actions/configure-aws-credentials@v3
-#         with:
-#           aws-region: us-east-1
-#           role-to-assume: ${{ secrets.AWS_IAM_ROLE }}
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # Environment name is dynamically set based on the branch, used in steps and scripts
+    environment: ${{ env.ENVIRONMENT_STAGE }}
 
-#       - name: Login to Amazon ECR
-#         id: ecr
-#         uses: aws-actions/amazon-ecr-login@v2
+    defaults:
+      run:
+        working-directory: ./roots/main-eks-root/  # Default working directory for all run commands
+        shell: bash  # Default shell for all run commands
 
-#       - name: Build and push Backend Docker image
-#         env:
-#           IMAGE_TAG: ${{ github.sha }}
-#           ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
-#           ECR_REPOSITORY: backend-repo
-#         run: |
-#           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./api-backend
-#           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4  # Checks out the repository under $GITHUB_WORKSPACE, so your workflow can access it
 
-#       - name: Build and push Frontend Docker image
-#         env:
-#           IMAGE_TAG: ${{ github.sha }}
-#           ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
-#           ECR_REPOSITORY: frontend-repo
-#         run: |
-#           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./frontend
-#           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+      - name: Login to AWS
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: ${{ secrets.IAM_ROLE }}
+          role-session-name: githubactionssession  # Ensures a unique session name
+          aws-region: us-east-1  # Specifies the AWS region for the actions
 
-#       - name: Deploy to Kubernetes using Helm
-#         run: |
-#           helm upgrade --install backend ./helm/backend --set image.repository=$ECR_REGISTRY/$ECR_REPOSITORY --set image.tag=$IMAGE_TAG --namespace prod
-#           helm upgrade --install frontend ./helm/frontend --set image.repository=$ECR_REGISTRY/$ECR_REPOSITORY --set image.tag=$IMAGE_TAG --namespace prod
+      - name: Initialize Terraform
+        run: terraform init  # Initializes a Terraform working directory by configuring the backend and installing plugins
+
+      - name: Plan Infrastructure
+        run: terraform plan -input=false -var-file="project-x-${{ env.ENVIRONMENT_STAGE }}.tfvars"
+        # Outputs the changes that Terraform plans to make to your infrastructure, allowing for manual review
+
+      # - name: Deploy Infrastructure
+      #   run: terraform apply -input=false -auto-approve -var-file="project-x-${{ env.ENVIRONMENT_STAGE }}.tfvars"
+      #   # Applies the Terraform configuration, automatically approving changes to reduce manual intervention
+
+      # - name: Configure Kubernetes context
+      #   run: aws eks update-kubeconfig --name project-x-${{ env.ENVIRONMENT_STAGE }}
+      #   # Configures kubectl to use a specific EKS cluster by updating the kubeconfig file
+
+      # - name: Apply Kubernetes configuration
+      #   run: kubectl apply -f kubernetes-config/aws-auth-cm.yaml
+      #   working-directory: ./kubernetes-resources/
+      #   # Applies a new configuration to a resource by filename or stdin, creating and updating resources in Kubernetes
 
