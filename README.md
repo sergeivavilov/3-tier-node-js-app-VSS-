@@ -1,3 +1,13 @@
+[![Reviews App CI/CD Pipeline](https://github.com/sergeivavilov/3-tier-node-js-app-vss/actions/workflows/app-pipeline.yaml/badge.svg)](https://github.com/sergeivavilov/3-tier-node-js-app-vss/actions/workflows/app-pipeline.yaml)
+
+
+
+[![Reviews App CI/CD Pipeline](https://github.com/sergeivavilov/3-tier-node-js-app-vss/actions/workflows/app-pipeline.yaml/badge.svg)](https://github.com/sergeivavilov/3-tier-node-js-app-vss/actions/workflows/app-pipeline.yaml)
+
+
+
+[![Reviews App CI/CD Pipeline](https://github.com/sergeivavilov/3-tier-node-js-app-vss/actions/workflows/app-pipeline.yaml/badge.svg)](https://github.com/sergeivavilov/3-tier-node-js-app-vss/actions/workflows/app-pipeline.yaml)
+
 
 
 ================================================================================================================================================================
