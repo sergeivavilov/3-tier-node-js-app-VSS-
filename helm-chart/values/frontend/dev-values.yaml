@@ -1,7 +1,7 @@
 applicationName: web-frontend
 replicaCount: 1
 image:
-  repository: 381492258433.dkr.ecr.us-east-1.amazonaws.com/nodejs-frontend	
+  repository: 730335359268.dkr.ecr.us-east-1.amazonaws.com/nodejs-frontend	
   pullPolicy: IfNotPresent
 port: 80
 service:
