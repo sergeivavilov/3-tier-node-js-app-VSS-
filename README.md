@@ -16,14 +16,16 @@
   tree;
   echo "";
 
-  # Loop through each text-based file including YAML files and print its contents
-  find . -type f \( -name "*.md" -o -name "*.py" -o -name "*.sql" -o -name "*.js" -o -name "*.html" -o -name "*.css" -o -name "*.yaml" \) -print -exec echo "Contents of {}:" \; -exec cat {} \; -exec echo "" \;
+  # Loop through each text-based file including YAML and JSON files and print its contents
+  find . -type f \( -name "*.md" -o -name "*.py" -o -name "*.sql" -o -name "*.js" -o -name "*.html" -o -name "*.css" -o -name "*.yaml" -o -name "*.json" \) ! -name "package-lock.json" -print -exec echo "Contents of {}:" \; -exec cat {} \; -exec echo "" \;
+
+  # Explicitly add specific files like the GitHub Actions workflow
+  echo "Contents of .github/workflows/app-pipeline.yaml:"
+  cat 3-tier-node-js-app-vss/.github/workflows/app-pipeline.yaml
+  echo "";
 } > all_project_contents.txt
 
 
-
-  find . -type f \( -name "*.md" -o -name "*.py" -o -name "*.sql" -o -name "*.js" -o -name "*.html" -o -name "*.css" -o -name "*.yaml" -o -name "*.json" \) -print -exec echo "Contents of {}:" \; -exec cat {} \; -exec echo "" \;
-} > all_project_contents.txt
 
 ================================================================================================================================================================
 
