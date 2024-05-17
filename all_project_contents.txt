@@ -87,6 +87,29 @@ a {
   color: #00B7FF;
 }
 
+./web/package.json
+Contents of ./web/package.json:
+{
+  "name": "web",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node ./bin/www"
+  },
+  "dependencies": {
+    "body-parser": "~1.13.2",
+    "cookie-parser": "~1.3.5",
+    "debug": "~2.6.9",
+    "express": "~4.13.1",
+    "jade": "~1.11.0",
+    "morgan": "~1.6.1",
+    "redis": "^1.0.0",
+    "redis-url": "^1.2.1",
+    "serve-favicon": "~2.3.0",
+    "request": "2.72.0"
+  }
+}
+
 ./web/routes/index.js
 Contents of ./web/routes/index.js:
 var express = require('express');
@@ -349,18 +372,21 @@ Contents of ./README.md:
 
 
 ================================================================================================================================================================
-{   
+{
   echo "Directory Structure:";
   tree;
   echo "";
 
-  # Loop through each text-based file including YAML files and print its contents
-  find . -type f \( -name "*.md" -o -name "*.py" -o -name "*.sql" -o -name "*.js" -o -name "*.html" -o -name "*.css" -o -name "*.yaml" \) -print -exec echo "Contents of {}:" \; -exec cat {} \; -exec echo "" \;
+  # Loop through each text-based file including YAML and JSON files and print its contents
+  find . -type f \( -name "*.md" -o -name "*.py" -o -name "*.sql" -o -name "*.js" -o -name "*.html" -o -name "*.css" -o -name "*.yaml" -o -name "*.json" \) ! -name "package-lock.json" -print -exec echo "Contents of {}:" \; -exec cat {} \; -exec echo "" \;
+
+  # Explicitly add specific files like the GitHub Actions workflow
+  echo "Contents of .github/workflows/app-pipeline.yaml:"
+  cat 3-tier-node-js-app-vss/.github/workflows/app-pipeline.yaml
+  echo "";
 } > all_project_contents.txt
 
 
-  find . -type f \( -name "*.md" -o -name "*.py" -o -name "*.sql" -o -name "*.js" -o -name "*.html" -o -name "*.css" -o -name "*.yaml" -o -name "*.json" \) -print -exec echo "Contents of {}:" \; -exec cat {} \; -exec echo "" \;
-} > all_project_contents.txt
 
 ================================================================================================================================================================
 
@@ -568,6 +594,26 @@ node 16 or higher
 
 These two variables need to be set
 
+./api/package.json
+Contents of ./api/package.json:
+{
+  "name": "api",
+  "version": "0.0.0",
+  "private": true,
+  "engines" : { 
+    "npm" : ">=8.0.0",
+    "node" : ">=16.0.0"
+  },
+  "scripts": {
+    "start": "node ./bin/www"
+  },
+  "dependencies": {
+    "express": "~4.13.1",
+    "pg": "8.8.0",
+    "node-uuid": "1.4.7"
+  }
+}
+
 ./api/app.js
 Contents of ./api/app.js:
 var express = require('express');
@@ -635,3 +681,5 @@ app.use(function (err, req, res, next) {
 
 
 module.exports = app;
+Contents of .github/workflows/app-pipeline.yaml:
+
