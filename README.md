@@ -20,6 +20,10 @@
   find . -type f \( -name "*.md" -o -name "*.py" -o -name "*.sql" -o -name "*.js" -o -name "*.html" -o -name "*.css" -o -name "*.yaml" \) -print -exec echo "Contents of {}:" \; -exec cat {} \; -exec echo "" \;
 } > all_project_contents.txt
 
+
+  find . -type f \( -name "*.md" -o -name "*.py" -o -name "*.sql" -o -name "*.js" -o -name "*.html" -o -name "*.css" -o -name "*.yaml" -o -name "*.json" \) -print -exec echo "Contents of {}:" \; -exec cat {} \; -exec echo "" \;
+} > all_project_contents.txt
+
 ================================================================================================================================================================
 
 
