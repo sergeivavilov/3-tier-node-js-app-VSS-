@@ -24,9 +24,21 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v3
         with:
-          role-to-assume: ${{ secrets.AWS_IAM_ROLE }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}  # Correct this to use AWS_ROLE_ARN
           role-session-name: githubactionssession
-          aws-region: us-east-1  # Defines the AWS region for the deployment
+          aws-region: us-east-1
+
+      - name: Check AWS Identity
+        run: aws sts get-caller-identity
+
+
+
+      # - name: Configure AWS Credentials
+      #   uses: aws-actions/configure-aws-credentials@v3
+      #   with:
+      #     role-to-assume: ${{ secrets.AWS_IAM_ROLE }}
+      #     role-session-name: githubactionssession
+      #     aws-region: us-east-1  # Defines the AWS region for the deployment
 
       - name: Login to Amazon ECR
         id: login-to-ecr
