@@ -15,12 +15,13 @@ Directory Structure:
 │   ├── app.js
 │   ├── index.html
 │   └── styles.css
+├── main.tf
 └── random
     ├── load-testing.py
     ├── mini-project-infra.png
     └── mini-project-software-design.png
 
-5 directories, 15 files
+5 directories, 16 files
 
 ./database/db-schema-creation.sql
 Contents of ./database/db-schema-creation.sql:
@@ -246,11 +247,17 @@ jobs:
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
 
+      - name: Ensure Terraform Configuration Files
+        run: |
+          if [ ! -f main.tf ]; then
+            echo "No Terraform configuration files found in the repository. Please add your .tf files."
+            exit 1
+          fi
+
       - name: Terraform Plan Only
         run: |
           terraform init
           terraform plan
-
 
 
 
