@@ -216,7 +216,7 @@ Contents of ./helm-chart/values/frontend/dev-values.yaml:
 applicationName: web-frontend
 replicaCount: 1
 image:
-  repository: 381492258433.dkr.ecr.us-east-1.amazonaws.com/nodejs-frontend	
+  repository: 730335359268.dkr.ecr.us-east-1.amazonaws.com/nodejs-frontend	
   pullPolicy: IfNotPresent
 port: 80
 service:
@@ -232,7 +232,7 @@ backend:
 
 image:
   backend:
-    repository: 381492258433.dkr.ecr.us-east-1.amazonaws.com/nodejs-backend
+    repository: 730335359268.dkr.ecr.us-east-1.amazonaws.com/nodejs-backend
     pullPolicy: IfNotPresent
 
 port:
