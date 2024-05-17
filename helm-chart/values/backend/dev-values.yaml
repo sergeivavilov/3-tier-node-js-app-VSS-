@@ -1,0 +1,23 @@
+backend:
+  applicationName: api-backend
+  replicaCount: 2
+
+image:
+  backend:
+    repository: 381492258433.dkr.ecr.us-east-1.amazonaws.com/nodejs-backend
+    pullPolicy: IfNotPresent
+
+port:
+  backend: 3000
+
+env:
+  backend:
+    port:
+      name: PORT
+      value: "3000"
+    dbname:
+      name: DB
+      value: "postgres://DB_USERNAME:DB_PASSWORD@DB_ENDPOINT/DB_NAME"
+
+# hostname: reviews-api-dev.atrubin.click
+
