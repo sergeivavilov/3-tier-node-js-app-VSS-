@@ -34,10 +34,18 @@ jobs:
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
 
+      - name: Ensure Terraform Configuration Files
+        run: |
+          if [ ! -f main.tf ]; then
+            echo "No Terraform configuration files found in the repository. Please add your .tf files."
+            exit 1
+          fi
+
       - name: Terraform Plan Only
         run: |
           terraform init
           terraform plan
+
 
 
 
