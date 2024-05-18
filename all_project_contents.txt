@@ -1,0 +1,788 @@
+Directory Structure:
+.
+├── README.md
+├── all_project_contents.txt
+├── api
+│   ├── Dockerfile
+│   ├── README.md
+│   ├── app.js
+│   ├── bin
+│   │   └── www
+│   ├── package-lock.json
+│   └── package.json
+├── compose.yaml
+├── db-secret.yaml
+├── helm-chart
+│   ├── Chart.yaml
+│   ├── templates
+│   │   ├── deployment.yaml
+│   │   ├── ingress.yaml
+│   │   └── service.yaml
+│   └── values
+│       ├── backend
+│       │   └── dev-values.yaml
+│       └── frontend
+│           └── dev-values.yaml
+├── resources
+│   ├── backend-deployment.yaml
+│   ├── backend-service.yaml
+│   ├── db-secret.yaml
+│   ├── frontend-deployment.yaml
+│   ├── frontend-ingress.yaml
+│   └── frontend-service.yaml
+└── web
+    ├── Dockerfile
+    ├── README.md
+    ├── app.js
+    ├── bin
+    │   └── www
+    ├── package-lock.json
+    ├── package.json
+    ├── public
+    │   └── stylesheets
+    │       └── style.css
+    ├── routes
+    │   └── index.js
+    └── views
+        ├── error.jade
+        ├── index.jade
+        └── layout.jade
+
+15 directories, 33 files
+
+./db-secret.yaml
+Contents of ./db-secret.yaml:
+apiVersion: v1
+kind: Secret
+metadata:
+  name: db-credentials
+  namespace: nodejs-app
+type: Opaque
+stringData:
+  DB_CONNECTION_STRING: "postgres://milestone:L()]2~qSku3M$}M)FNSaq1xV+%[m@reviews-app-db.cresqccmg7d6.us-east-1.rds.amazonaws.com/ReviewsAppData"
+#
+./web/README.md
+Contents of ./web/README.md:
+# Devops Web App
+
+## install the node packages for the web tier
+
+```
+npm 8 or higher
+node 16 or higher
+```
+
+
+```sh
+  npm install
+```
+
+## start the app
+
+```sh
+  npm start
+```
+
+## NOTE this app uses two env variables
+
+- PORT: optional variable to specify the listening PORT. Default is 3000
+- API_HOST: the full url to call the API app (syntax: `http://BACKEND_HOSTNAME:BACKEND_PORT`)
+
+These two variables need to be set
+
+## Expected UI page all components are working: Frontend => Backend => DB
+
+![Frontend-expected-UI](https://github.com/312-bc/3-tier-node-js-app-23C/assets/43100287/a1d2dc62-1f34-4c75-8688-77269b4f381e)
+
+./web/public/stylesheets/style.css
+Contents of ./web/public/stylesheets/style.css:
+body {
+  padding: 50px;
+  font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
+}
+
+a {
+  color: #00B7FF;
+}
+
+./web/package.json
+Contents of ./web/package.json:
+{
+  "name": "web",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node ./bin/www"
+  },
+  "dependencies": {
+    "body-parser": "~1.13.2",
+    "cookie-parser": "~1.3.5",
+    "debug": "~2.6.9",
+    "express": "~4.13.1",
+    "jade": "~1.11.0",
+    "morgan": "~1.6.1",
+    "redis": "^1.0.0",
+    "redis-url": "^1.2.1",
+    "serve-favicon": "~2.3.0",
+    "request": "2.72.0"
+  }
+}
+
+./web/routes/index.js
+Contents of ./web/routes/index.js:
+var express = require('express');
+var router = express.Router();
+var request = require('request');
+
+
+var api_url = process.env.API_HOST + '/api/status';
+
+/* GET home page. */
+router.get('/', function (req, res, next) {
+    request({
+        method: 'GET',
+        url: api_url,
+        json: true
+    },
+        function (error, response, body) {
+            if (error || response.statusCode !== 200) {
+                return res.status(500).send('error running request to ' + api_url);
+            } else {
+                res.render('index', {
+                    title: 'Frontend - Hi upcoming DevOps Engineers, how is hands-on?',
+                    request_uuid: body.request_uuid,
+                    time: body.time
+                });
+            }
+        }
+    );
+});
+
+module.exports = router;
+./web/app.js
+Contents of ./web/app.js:
+var express = require('express');
+var path = require('path');
+var favicon = require('serve-favicon');
+var logger = require('morgan');
+var cookieParser = require('cookie-parser');
+var bodyParser = require('body-parser');
+
+var routes = require('./routes/index');
+
+var app = express();
+
+// view engine setup
+app.set('views', path.join(__dirname, 'views'));
+app.set('view engine', 'jade');
+
+// uncomment after placing your favicon in /public
+//app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
+app.use(logger('dev'));
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(cookieParser());
+app.use(express.static(path.join(__dirname, 'public')));
+
+app.use('/', routes);
+
+// catch 404 and forward to error handler
+app.use(function (req, res, next) {
+  var err = new Error('Not Found');
+  err.status = 404;
+  next(err);
+});
+
+// error handlers
+
+// development error handler
+// will print stacktrace
+if (app.get('env') === 'development') {
+  app.use(function (err, req, res, next) {
+    res.status(err.status || 500);
+    res.render('error', { // 'error' should be the name of your error view template
+      message: err.message,
+      error: err
+    });
+  });
+}
+
+// production error handler
+// no stacktraces leaked to user
+app.use(function (err, req, res, next) {
+  res.status(err.status || 500);
+  res.render('error', { // 'error' is the name of your view template
+    message: err.message,
+    error: {}
+  });
+});
+
+
+module.exports = app;
+
+./resources/db-secret.yaml
+Contents of ./resources/db-secret.yaml:
+apiVersion: v1
+kind: Secret
+metadata:
+  name: db-credentials
+type: Opaque
+data:
+  DB: cG9zdGdyZXM6Ly9taWxlc3RvbmU6YUxOLSlDNXgpQWF4P29lVUdHOTViTkp0WSE2MEByZXZpZXdzLWFwcC1kYi5jcmVzcWNjbWc3ZDYudXMtZWFzdC0xLnJkcy5hbWF6b25hd3MuY29tL1Jldmlld3NBcHBEYXRh
+
+./resources/backend-service.yaml
+Contents of ./resources/backend-service.yaml:
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+spec:
+  selector:
+    app: backend
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 3000
+  type: ClusterIP
+
+
+./resources/frontend-deployment.yaml
+Contents of ./resources/frontend-deployment.yaml:
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  labels:
+    app: frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+      containers:
+        - name: frontend
+          image: 730335359268.dkr.ecr.us-east-1.amazonaws.com/nodejs-frontend:325fba55a675ee062be3735608eee4d289bd8b97	
+          ports:
+            - containerPort: 80
+          env:
+            - name: BACKEND_URL
+              value: "http://backend-service:80"
+./resources/frontend-ingress.yaml
+Contents of ./resources/frontend-ingress.yaml:
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: frontend-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+    - host: myapp.atrubin.click
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend-service
+                port:
+                  number: 80
+
+./resources/backend-deployment.yaml
+Contents of ./resources/backend-deployment.yaml:
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  labels:
+    app: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+      containers:
+        - name: backend
+          image: 730335359268.dkr.ecr.us-east-1.amazonaws.com/nodejs-backend:325fba55a675ee062be3735608eee4d289bd8b97
+          ports:
+            - containerPort: 3000
+          env:
+            - name: DB
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: DB
+
+./resources/frontend-service.yaml
+Contents of ./resources/frontend-service.yaml:
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+spec:
+  selector:
+    app: frontend
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  type: ClusterIP
+
+./helm-chart/Chart.yaml
+Contents of ./helm-chart/Chart.yaml:
+apiVersion: v2
+name: helm-chart
+description: A Helm chart for Kubernetes
+version: 0.1.0
+
+
+
+./helm-chart/values/frontend/dev-values.yaml
+Contents of ./helm-chart/values/frontend/dev-values.yaml:
+applicationName: web-frontend
+replicaCount: 1
+image:
+  repository: 730335359268.dkr.ecr.us-east-1.amazonaws.com/nodejs-frontend	
+  pullPolicy: IfNotPresent
+port: 80
+service:
+  type: ClusterIP
+  port: 80
+  targetport: 80
+hostname: myapp.atrubin.click
+env:
+  - name: PORT
+    value: "80"
+  - name: API_URL
+    value: "http://api-backend-svc:3000"
+./helm-chart/values/backend/dev-values.yaml
+Contents of ./helm-chart/values/backend/dev-values.yaml:
+applicationName: api-backend
+replicaCount: 2
+image:
+  repository: 730335359268.dkr.ecr.us-east-1.amazonaws.com/nodejs-backend
+  tag: ""
+  pullPolicy: IfNotPresent
+port: 3000
+service:
+  type: ClusterIP
+  port: 80
+  targetport: 3000
+env:
+  - name: PORT
+    value: "3000"
+envFromSecret: db-credentials
+# hostname: reviews-api-dev.atrubin.click
+#
+
+./helm-chart/templates/deployment.yaml
+Contents of ./helm-chart/templates/deployment.yaml:
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.applicationName }}
+  labels:
+    app: {{ .Values.applicationName }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.applicationName }}
+    spec:
+      containers:
+        - name: {{ .Values.applicationName }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.port }}
+              protocol: TCP
+          env:
+            {{- if .Values.env }}
+            {{- range .Values.env }}
+            - name: {{ .name }}
+              value: {{ .value | quote }}
+            {{- end }}
+            {{- end }}
+          {{- if .Values.envFromSecret }}
+          envFrom:
+            - secretRef:
+                name: {{ .Values.envFromSecret }}
+          {{- end }}
+  selector:
+    matchLabels:
+      app: {{ .Values.applicationName }}
+
+./helm-chart/templates/ingress.yaml
+Contents of ./helm-chart/templates/ingress.yaml:
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: "ingress-{{ .Values.applicationName }}"
+spec:
+  rules:
+  - host: {{ .Values.hostname }}
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: "{{ .Values.applicationName }}-svc"
+            port:
+              number: {{ .Values.service.port }}
+  ingressClassName: nginx
+
+./helm-chart/templates/service.yaml
+Contents of ./helm-chart/templates/service.yaml:
+apiVersion: v1
+kind: Service
+metadata:
+  name: "{{ .Values.applicationName }}-svc"
+  labels:
+    app: {{ .Values.applicationName }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.targetport }}
+      protocol: TCP
+      name: http
+  selector:
+    app: {{ .Values.applicationName }}
+
+./README.md
+Contents of ./README.md:
+[![Reviews App CI/CD Pipeline](https://github.com/sergeivavilov/3-tier-node-js-app-vss/actions/workflows/app-pipeline.yaml/badge.svg)](https://github.com/sergeivavilov/3-tier-node-js-app-vss/actions/workflows/app-pipeline.yaml)
+
+
+
+[![Reviews App CI/CD Pipeline](https://github.com/sergeivavilov/3-tier-node-js-app-vss/actions/workflows/app-pipeline.yaml/badge.svg)](https://github.com/sergeivavilov/3-tier-node-js-app-vss/actions/workflows/app-pipeline.yaml)
+
+
+
+[![Reviews App CI/CD Pipeline](https://github.com/sergeivavilov/3-tier-node-js-app-vss/actions/workflows/app-pipeline.yaml/badge.svg)](https://github.com/sergeivavilov/3-tier-node-js-app-vss/actions/workflows/app-pipeline.yaml)
+
+
+
+================================================================================================================================================================
+{
+  echo "Directory Structure:";
+  tree;
+  echo "";
+
+  # Loop through each text-based file including YAML and JSON files and print its contents
+  find . -type f \( -name "*.md" -o -name "*.py" -o -name "*.sql" -o -name "*.js" -o -name "*.html" -o -name "*.css" -o -name "*.yaml" -o -name "*.json" \) ! -name "package-lock.json" -print -exec echo "Contents of {}:" \; -exec cat {} \; -exec echo "" \;
+
+  # Explicitly add specific files like the GitHub Actions workflow
+  echo "Contents of .github/workflows/app-pipeline.yaml:"
+  cat 3-tier-node-js-app-vss/.github/workflows/app-pipeline.yaml
+  echo "";
+} > all_project_contents.txt
+
+
+
+================================================================================================================================================================
+
+
+# 3-Tier Application: Product Review System
+
+## Overview
+This repository contains a 3-tier web application, the Product Review System, where users can add products and leave reviews. The 3-tier architecture comprises a frontend, backend, and a database. The application is designed to run on AWS infrastructure with high availability and scalability in mind.
+
+- The Frontend application provides a user interface built with HTML, CSS, and JavaScript, served by an Nginx server. 
+
+- The Backend is a RESTful API built with Python and Flask, which processes requests, performs operations, and interfaces with a MySQL database.
+
+- The MySQL Database stores product and review data.
+
+For more details about each component, refer to the README files in their respective directories:
+
+- [Frontend](./frontend/README.md)
+- [Backend](./api-backend/README.md)
+
+## Important Note
+Since our frontend just hosts static webpages, it relies on client-side browser processing with Javascript. Therefore requests to the backend come from the user directly (browsers calls the APIs to backend), which means that backend DNS name also needs to be publicly accessible.
+
+Flow of the request is `Client => Frontend => Client => Backend => Database`
+
+
+## Diagrams
+
+**Software Design Overview**
+![Software Design Overview](random/mini-project-software-design.png)
+
+**Infrastructure Design Overview**
+![Infrastructure Design Overview](random/mini-project-infra.png)
+
+
+
+## Helpful Resources on Learning to work with Git:
+
+Naming Conventions:
+
+- Best practices for file and branch naming: **https://namingconvention.org/git/**
+
+Git/GitHub Fundamentals:
+
+- Official Git documentation: **https://git-scm.com/doc**
+
+Pull Requests (PRs):
+- GitHub Pull Request documentation: **https://docs.github.com/en/pull-requests**
+
+
+./.github/workflows/app-pipeline.yaml
+Contents of ./.github/workflows/app-pipeline.yaml:
+# name of the Workflow
+name: "CI/CD pipeline with a NodeJS app"
+
+on:
+  push:
+    branches:
+    - main
+    - staging
+    - dev
+
+permissions:
+  id-token: write 
+  contents: read 
+
+env:
+  # create new variable with custom dynamic value depending on branch name
+  ENVIRONMENT_STAGE: ${{ (github.ref == 'refs/heads/main' && 'production') || (github.ref == 'refs/heads/staging' && 'staging') || 'dev' }}
+
+jobs:
+  # name of the job
+  build-deploy:
+    # where to run the job, if GHA runner - just specify image name
+    runs-on: ubuntu-latest
+    environment: ${{ (github.ref == 'refs/heads/main' && 'production') || (github.ref == 'refs/heads/staging' && 'staging') || 'dev' }}
+
+    # any instructions to execute
+    steps:
+    - name: Checkout Repository
+      # "uses" allows you to specify ready action names
+      uses: actions/checkout@v4
+
+    - name: Login to AWS
+      uses: aws-actions/configure-aws-credentials@v3
+      with:
+        role-to-assume: ${{ secrets.IAM_ROLE }}
+        role-session-name: githubactionssession
+        aws-region: "us-east-1"
+
+    - name: Login to ECR
+      id: login-to-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    # - name: Build, tag, and push backend docker image to Amazon ECR
+    #   env:
+    #     REGISTRY: ${{ steps.login-to-ecr.outputs.registry }}
+    #     REPOSITORY: nodejs-backend
+    #     IMAGE_TAG: ${{ github.sha }}
+    #   working-directory: ./api/
+    #   run: |
+    #     docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
+    #     docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+
+    # - name: Build, tag, and push frontend docker image to Amazon ECR
+    #   env:
+    #     REGISTRY: ${{ steps.login-to-ecr.outputs.registry }}
+    #     REPOSITORY: nodejs-frontend
+    #     IMAGE_TAG: ${{ github.sha }}
+    #   working-directory: ./web/
+    #   run: |
+    #     docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
+    #     docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+
+    - name: Loging to EKS
+      run: aws eks update-kubeconfig --name project-x-${ENVIRONMENT_STAGE}
+
+    # installing ingress-nginx Helm repository for ingress-controller
+    - name: Add ingress-nginx Helm repository
+      run: |
+        helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+        helm repo update
+    # installing the ingress-controller
+    - name: Install NGINX Ingress controller
+      run: |
+        helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
+          # --namespace kube-system --create-namespace
+
+    # - name: Deploy Backend to Kubernetes
+    #   env:
+    #     IMAGE_TAG: ${{ github.sha }}
+    #   run: |
+    #     helm upgrade --install api ./helm-chart/ \
+    #       --values ./helm-chart/values/backend/${ENVIRONMENT_STAGE}-values.yaml \
+    #       --set image.tag="$IMAGE_TAG" \
+    #       --namespace nodejs-app --create-namespace
+
+    # - name: Deploy Frontend to Kubernetes
+    #   env:
+    #     IMAGE_TAG: ${{ github.sha }}
+    #   run: |
+    #     helm upgrade --install web ./helm-chart/ \
+    #       --values ./helm-chart/values/frontend/${ENVIRONMENT_STAGE}-values.yaml \
+    #       --set image.tag="$IMAGE_TAG" \
+    #       --namespace nodejs-app --create-namespace
+
+          #
+./compose.yaml
+Contents of ./compose.yaml:
+services:
+  webcontainer:
+    build: web/
+    ports:
+      - "80:80"
+    networks:
+      - appnetwork
+    environment:
+      API_HOST: "http://apicontainer:3000"
+  apicontainer:
+    build: api/
+    networks:
+      - appnetwork
+    environment:
+      DB: "postgres://pgadmin:crackers@dbcontainer/sampledb"
+  dbcontainer:
+    image: "postgres:16"
+    environment:
+      POSTGRES_PASSWORD: "crackers"
+      POSTGRES_USER: "pgadmin"
+      POSTGRES_DB: "sampledb"
+    networks:
+      - appnetwork
+networks:
+  appnetwork:
+
+./api/README.md
+Contents of ./api/README.md:
+# Devops API App
+
+# System Requirements
+
+```
+npm 8 or higher
+node 16 or higher
+```
+
+## install the node packages for the api tier
+
+```sh
+→ npm install
+```
+
+## start the app
+
+```sh
+→ npm start
+```
+
+## NOTE this app uses two env variables
+
+- PORT: optional variable to specify the listening PORT. Default is 3000
+- DB: the postgresql url (also called as DB Connection string) to connect (syntax: `postgres://DB_USERNAME:DB_PASSWORD@DB_ENDPOINT/DB_NAME`).
+    - DB_NAME should be equal to the database that was created inside the cluster either using `CREATE DATABASE ..` command or `db_name` parameter in Terraform for RDS (https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/db_instance#db_name).
+    - Do not confuse with DB cluster/instance name, which is what shows up on AWS Console as a name for the database instances.
+
+These two variables need to be set
+
+./api/package.json
+Contents of ./api/package.json:
+{
+  "name": "api",
+  "version": "0.0.0",
+  "private": true,
+  "engines" : { 
+    "npm" : ">=8.0.0",
+    "node" : ">=16.0.0"
+  },
+  "scripts": {
+    "start": "node ./bin/www"
+  },
+  "dependencies": {
+    "express": "~4.13.1",
+    "pg": "8.8.0",
+    "node-uuid": "1.4.7"
+  }
+}
+
+./api/app.js
+Contents of ./api/app.js:
+var express = require('express');
+var app = express();
+var uuid = require('node-uuid');
+
+var { Pool } = require('pg');
+
+var conString = process.env.DB; // "postgres://username:password@localhost/database";
+
+// Routes
+app.get('/api/status', function (req, res) {
+  try {
+    const pool = new Pool({
+      connectionString: conString,
+    });
+    pool.query('SELECT now() as time', [], function (err, result) {
+      //call `done()` to release the client back to the pool
+      if (err) {
+        return res.status(500).send('error running query');
+      }
+
+      return res.json({
+        request_uuid: uuid.v4(),
+        time: result.rows[0].time
+      });
+    });
+
+  } catch (error) {
+    console.log('error:')
+    console.log(error)
+  }
+});
+
+// catch 404 and forward to error handler
+app.use(function (req, res, next) {
+  var err = new Error('Not Found');
+  err.status = 404;
+  next(err);
+});
+
+// error handlers
+
+// development error handler
+// will print stacktrace
+if (app.get('env') === 'development') {
+  app.use(function (err, req, res, next) {
+    res.status(err.status || 500);
+    res.json({
+      message: err.message,
+      error: err
+    });
+  });
+}
+
+// production error handler
+// no stacktraces leaked to user
+app.use(function (err, req, res, next) {
+  res.status(err.status || 500);
+  res.json({
+    message: err.message,
+    error: {}
+  });
+});
+
+
+module.exports = app;
+Contents of .github/workflows/app-pipeline.yaml:
+
