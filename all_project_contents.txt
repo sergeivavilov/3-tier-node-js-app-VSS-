@@ -604,14 +604,16 @@ jobs:
     #     docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
     #     docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
 
-    - name: Loging to EKS
-      run: aws eks update-kubeconfig --name project-x-${ENVIRONMENT_STAGE}
+    - name: Login to EKS
+      run: |
+        aws eks update-kubeconfig --name project-x-${ENVIRONMENT_STAGE}
 
     # installing ingress-nginx Helm repository for ingress-controller
     - name: Add ingress-nginx Helm repository
       run: |
         helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
         helm repo update
+        
     # installing the ingress-controller
     - name: Install NGINX Ingress controller
       run: |
@@ -636,7 +638,6 @@ jobs:
     #       --set image.tag="$IMAGE_TAG" \
     #       --namespace nodejs-app --create-namespace
 
-          #
 ./compose.yaml
 Contents of ./compose.yaml:
 services:
