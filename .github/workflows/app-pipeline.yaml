@@ -63,7 +63,7 @@ jobs:
     #     docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
 
     - name: Loging to EKS
-      run: aws eks update-kubeconfig --name project-x-${ENVIRONMENT_STAGE}
+      run: aws eks update-kubeconfig --name <actual-cluster-name>
 
     # installing ingress-nginx Helm repository for ingress-controller
     - name: Add ingress-nginx Helm repository
