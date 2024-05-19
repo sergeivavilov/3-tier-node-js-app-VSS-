@@ -40,6 +40,7 @@ jobs:
       id: login-to-ecr
       uses: aws-actions/amazon-ecr-login@v2
 
+    # Commented out for now
     # - name: Build, tag, and push backend docker image to Amazon ECR
     #   env:
     #     REGISTRY: ${{ steps.login-to-ecr.outputs.registry }}
@@ -50,6 +51,7 @@ jobs:
     #     docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
     #     docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
 
+    # Commented out for now
     # - name: Build, tag, and push frontend docker image to Amazon ECR
     #   env:
     #     REGISTRY: ${{ steps.login-to-ecr.outputs.registry }}
@@ -68,12 +70,14 @@ jobs:
       run: |
         helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
         helm repo update
+        
     # installing the ingress-controller
     - name: Install NGINX Ingress controller
       run: |
         helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
           # --namespace kube-system --create-namespace
 
+    # Commented out for now
     # - name: Deploy Backend to Kubernetes
     #   env:
     #     IMAGE_TAG: ${{ github.sha }}
@@ -83,6 +87,7 @@ jobs:
     #       --set image.tag="$IMAGE_TAG" \
     #       --namespace nodejs-app --create-namespace
 
+    # Commented out for now
     # - name: Deploy Frontend to Kubernetes
     #   env:
     #     IMAGE_TAG: ${{ github.sha }}
@@ -91,5 +96,3 @@ jobs:
     #       --values ./helm-chart/values/frontend/${ENVIRONMENT_STAGE}-values.yaml \
     #       --set image.tag="$IMAGE_TAG" \
     #       --namespace nodejs-app --create-namespace
-
-          #
