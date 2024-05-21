@@ -2,8 +2,9 @@ var express = require('express');
 var router = express.Router();
 var request = require('request');
 
-
-var api_url = process.env.API_HOST + '/api/status';
+var ipAddress = process.env.IP_ADDRESS || '10.7.110.213';  // Default IP address if not set in environment
+var api_url = 'http://' + ipAddress + '/api/status';
+// var api_url = process.env.VARIABLE + '/api/status';
 
 /* GET home page. */
 router.get('/', function (req, res, next) {
