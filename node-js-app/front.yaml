@@ -14,7 +14,7 @@ spec:
         app: frontend
     spec:
       containers:
-      - image: 657126973073.dkr.ecr.us-east-1.amazonaws.com/nodejsapp:0.1
+      - image: 730335359268.dkr.ecr.us-east-1.amazonaws.com/nodejsapp:0.1
         name: frontend
         ports:
           - containerPort: 80
