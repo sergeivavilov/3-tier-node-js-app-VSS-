@@ -20,8 +20,8 @@
   find . -type f \( -name "*.md" -o -name "*.py" -o -name "*.sql" -o -name "*.js" -o -name "*.html" -o -name "*.css" -o -name "*.yaml" -o -name "*.json" \) ! -name "package-lock.json" -print -exec echo "Contents of {}:" \; -exec cat {} \; -exec echo "" \;
 
   # Explicitly add specific files like the GitHub Actions workflow
-  echo "Contents of .github/workflows/app-pipeline.yaml:"
-  cat 3-tier-node-js-app-vss/.github/workflows/app-pipeline.yaml
+  echo "Contents of .github/workflows/kubernetes-deploy.yaml:"
+  cat 3-tier-node-js-app-vss/.github/workflows/kubernetes-deploy.yaml
   echo "";
 } > all_project_contents.txt
 
