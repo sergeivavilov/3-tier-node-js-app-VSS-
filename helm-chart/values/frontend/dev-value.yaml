@@ -13,4 +13,4 @@ service:
   port: 80
 
 ### Ingress
-hostname: myapp.nasibullina.click
+hostname: vss.click
