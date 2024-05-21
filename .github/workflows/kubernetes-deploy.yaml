@@ -11,7 +11,6 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    # Select environment based on branch pushed
     environment: ${{ (github.ref == 'refs/heads/main' && 'dev') || (github.ref == 'refs/heads/prod' && 'production') }}
 
     steps:
@@ -21,7 +20,7 @@ jobs:
           role-to-assume: ${{ secrets.IAM_ROLE }}
           aws-region: "us-east-1"
 
-      - name: clone repo 
+      - name: Clone repo 
         uses: actions/checkout@v4
 
       - name: Login to ECR
@@ -31,7 +30,7 @@ jobs:
       # - name: Build, tag, and push frontend docker image to Amazon ECR
       #   env:
       #     REGISTRY: ${{ steps.login-to-ecr.outputs.registry }}
-      #     REPOSITORY: nodejsapp
+      #     REPOSITORY: web-frontend
       #     IMAGE_TAG: 0.1
       #   working-directory: ./web
       #   run: |
@@ -41,7 +40,7 @@ jobs:
       # - name: Build, tag, and push Backend docker image to Amazon ECR
       #   env:
       #     REGISTRY: ${{ steps.login-to-ecr.outputs.registry }}
-      #     REPOSITORY: apirepo
+      #     REPOSITORY: api-backend
       #     IMAGE_TAG: 0.1
       #   working-directory: ./api
       #   run: |
@@ -57,45 +56,46 @@ jobs:
       # - name: Install NGINX Ingress Controller
       #   run: kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.10.1/deploy/static/provider/cloud/deploy.yaml
 
-      # - name: deploy frontend and service for it
+      - name: Deploy frontend with Helm
+        run: helm upgrade --install nodejs-frontend ./helm-chart --values ./helm-chart/values/frontend/dev-value.yaml --namespace sample-app
+
+      - name: Deploy backend with Helm
+        run: helm upgrade --install nodejs-backend ./helm-chart --values ./helm-chart/values/backend/dev-value.yaml --namespace sample-app
+
+      # Commented steps for future use
+      # - name: deploy frontend by YAML file
       #   run: kubectl apply -f node-js-app/front.yaml
 
-      # - name: deploy backend and service for it
+      # - name: deploy backend by YAML file
       #   run: kubectl apply -f node-js-app/back.yaml
 
-      # - name: deploy database and service for it
+      # - name: deploy database by YAML file
       #   run: kubectl apply -f node-js-app/database.yaml
 
       # - name: ingress rules
       #   run: kubectl apply -f node-js-app/ingress.yaml
 
-      # - name: Deploy frontend
-      #   run: helm upgrade --install node-js-app ./node-js-app/ --values ./node-js-app/values/frontend.yaml --namespace sample-app
+  destroy:
+    runs-on: ubuntu-latest
 
-      # - name: Deploy backend
-      #   run: |
-      #     helm upgrade --install node-js-api ./node-js-app/ --values ./node-js-app/values/backend.yaml --namespace sample-app
+    steps:
+      - name: AWS Loggin
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: ${{ secrets.IAM_ROLE }}
+          aws-region: "us-east-1"
+
+      - name: Login to EKS
+        run: aws eks update-kubeconfig --region us-east-1 --name project-x-dev
 
       - name: Destroy frontend deployment
-        run: kubectl delete -f node-js-app/front.yaml || true
+        run: helm uninstall nodejs-frontend --namespace sample-app || true
 
       - name: Destroy backend deployment
-        run: kubectl delete -f node-js-app/back.yaml || true
-
-      - name: Destroy database deployment
-        run: kubectl delete -f node-js-app/database.yaml || true
-
-      - name: Destroy ingress rules
-        run: kubectl delete -f node-js-app/ingress.yaml || true
+        run: helm uninstall nodejs-backend --namespace sample-app || true
 
       - name: Delete namespace
         run: kubectl delete namespace sample-app || true
 
       - name: Logout from ECR
         run: aws ecr logout --region us-east-1
-
-
-# apply ingress rules file through kubectl apply
-
-# see what happens
-      
