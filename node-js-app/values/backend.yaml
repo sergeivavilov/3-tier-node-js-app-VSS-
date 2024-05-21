@@ -3,7 +3,7 @@
 replicaCount: 1
 applicationName: backend-api
 image:
-  repository: 657126973073.dkr.ecr.us-east-1.amazonaws.com/apirepo
+  repository: 730335359268.dkr.ecr.us-east-1.amazonaws.com/apirepo
   tag: 0.1
   pullPolicy: IfNotPresent
 port: 80
