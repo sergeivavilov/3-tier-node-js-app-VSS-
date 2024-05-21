@@ -18,7 +18,7 @@ spec:
         app: backend-api
     spec:
       containers:
-      - image: 657126973073.dkr.ecr.us-east-1.amazonaws.com/apirepo:0.1
+      - image: 730335359268.dkr.ecr.us-east-1.amazonaws.com/apirepo:0.1
         name: backend-api
         ports:
           - containerPort: 3000
