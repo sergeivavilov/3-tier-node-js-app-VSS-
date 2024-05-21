@@ -1,0 +1,17 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress-for-front
+  namespace: sample-app
+spec:
+  rules:
+  - host: "app.easydevops.click"
+    http:
+      paths:
+      - pathType: Prefix
+        path: "/"
+        backend:
+          service:
+            name: front-svc
+            port:
+              number: 80
