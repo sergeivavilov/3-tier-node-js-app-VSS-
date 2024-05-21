@@ -221,7 +221,6 @@ applicationName: nodejs-frontend
 replicaCount: 2
 image:
   repository: 730335359268.dkr.ecr.us-east-1.amazonaws.com/web-frontend
-  tag: 0.1
 pullPolicy: ifNotPresent
 port: 80
 
@@ -231,7 +230,9 @@ service:
   port: 80
 
 ### Ingress
-hostname: vss.click
+ingress:
+  create: true
+  hostname: vss.click
 ./helm-chart/values/backend/dev-value.yaml
 Contents of ./helm-chart/values/backend/dev-value.yaml:
 ### Deploy
@@ -239,7 +240,6 @@ applicationName: nodejs-backend
 replicaCount: 2
 image:
   repository: 730335359268.dkr.ecr.us-east-1.amazonaws.com/api-backend
-  tag: 0.1
 pullPolicy: ifNotPresent
 port: 3000
 
@@ -249,7 +249,8 @@ service:
   port: 3000
 
 ### Ingress
-hostname: vss.click
+ingress:
+  create: false
 ./helm-chart/templates/deployment.yaml
 Contents of ./helm-chart/templates/deployment.yaml:
 apiVersion: apps/v1
@@ -280,6 +281,7 @@ spec:
 
 ./helm-chart/templates/ingress.yaml
 Contents of ./helm-chart/templates/ingress.yaml:
+{{- if .Values.ingress.create }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -297,6 +299,7 @@ spec:
                 name: "{{ .Values.applicationName }}-svc"
                 port:
                   number: {{ .Values.service.port }}
+{{- end }}
 
 ./helm-chart/templates/service.yaml
 Contents of ./helm-chart/templates/service.yaml:
@@ -330,7 +333,30 @@ Contents of ./README.md:
 
 
 
-================================================================================================================================================================
+============================================================================================================================================================== {
+  # Print the directory structure
+  echo "Directory Structure:"
+  tree;
+  echo "";
+
+  # Loop through each text-based file including YAML and JSON files and print its contents
+  # Exclude package-lock.json to shorten output
+  find . -type f \( -name "*.md" -o -name "*.py" -o -name "*.sql" -o -name "*.js" -o -name "*.html" -o -name "*.css" -o -name "*.yaml" -o -name "*.json" \) ! -name "package-lock.json" -print -exec echo "Contents of {}:" \; -exec cat {} \; -exec echo "" \;
+
+  # Explicitly add specific files like the GitHub Actions workflow
+  echo "Contents of .github/workflows/kubernetes-deploy.yaml:"
+  cat .github/workflows/kubernetes-deploy.yaml
+  echo "";
+} > all_project_contents.txt
+
+
+
+===============================================================================================================================================================
+
+
+
+
+
 {
   echo "Directory Structure:";
   tree;
@@ -340,8 +366,8 @@ Contents of ./README.md:
   find . -type f \( -name "*.md" -o -name "*.py" -o -name "*.sql" -o -name "*.js" -o -name "*.html" -o -name "*.css" -o -name "*.yaml" -o -name "*.json" \) ! -name "package-lock.json" -print -exec echo "Contents of {}:" \; -exec cat {} \; -exec echo "" \;
 
   # Explicitly add specific files like the GitHub Actions workflow
-  echo "Contents of .github/workflows/app-pipeline.yaml:"
-  cat 3-tier-node-js-app-vss/.github/workflows/app-pipeline.yaml
+  echo "Contents of .github/workflows/kubernetes-deploy.yaml:"
+  cat 3-tier-node-js-app-vss/.github/workflows/kubernetes-deploy.yaml
   echo "";
 } > all_project_contents.txt
 
@@ -405,8 +431,8 @@ on:
     branches: ["*"]
 
 permissions:
-  id-token: write # This is required for requesting the JWT
-  contents: read  # This is required for actions/checkout
+  id-token: write
+  contents: read
 
 jobs:
   deploy:
@@ -420,32 +446,12 @@ jobs:
           role-to-assume: ${{ secrets.IAM_ROLE }}
           aws-region: "us-east-1"
 
-      - name: Clone repo 
+      - name: Clone repo
         uses: actions/checkout@v4
 
       - name: Login to ECR
         id: login-to-ecr
         uses: aws-actions/amazon-ecr-login@v2
-
-      # - name: Build, tag, and push frontend docker image to Amazon ECR
-      #   env:
-      #     REGISTRY: ${{ steps.login-to-ecr.outputs.registry }}
-      #     REPOSITORY: web-frontend
-      #     IMAGE_TAG: 0.1
-      #   working-directory: ./web
-      #   run: |
-      #     docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
-      #     docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
-      
-      # - name: Build, tag, and push Backend docker image to Amazon ECR
-      #   env:
-      #     REGISTRY: ${{ steps.login-to-ecr.outputs.registry }}
-      #     REPOSITORY: api-backend
-      #     IMAGE_TAG: 0.1
-      #   working-directory: ./api
-      #   run: |
-      #     docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
-      #     docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
 
       - name: Login to EKS
         run: aws eks update-kubeconfig --region us-east-1 --name project-x-dev
@@ -453,27 +459,17 @@ jobs:
       - name: Create namespace
         run: kubectl create namespace sample-app || true
 
-      # - name: Install NGINX Ingress Controller
-      #   run: kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.10.1/deploy/static/provider/cloud/deploy.yaml
-
       - name: Deploy frontend with Helm
-        run: helm upgrade --install nodejs-frontend ./helm-chart --values ./helm-chart/values/frontend/dev-value.yaml --namespace sample-app
+        run: |
+          helm upgrade --install nodejs-frontend ./helm-chart --values ./helm-chart/values/frontend/dev-value.yaml --namespace sample-app
+        env:
+          HELM_DEBUG: "true"
 
       - name: Deploy backend with Helm
-        run: helm upgrade --install nodejs-backend ./helm-chart --values ./helm-chart/values/backend/dev-value.yaml --namespace sample-app
-
-      # Commented steps for future use
-      # - name: deploy frontend by YAML file
-      #   run: kubectl apply -f node-js-app/front.yaml
-
-      # - name: deploy backend by YAML file
-      #   run: kubectl apply -f node-js-app/back.yaml
-
-      # - name: deploy database by YAML file
-      #   run: kubectl apply -f node-js-app/database.yaml
-
-      # - name: ingress rules
-      #   run: kubectl apply -f node-js-app/ingress.yaml
+        run: |
+          helm upgrade --install nodejs-backend ./helm-chart --values ./helm-chart/values/backend/dev-value.yaml --namespace sample-app
+        env:
+          HELM_DEBUG: "true"
 
   destroy:
     runs-on: ubuntu-latest
@@ -648,4 +644,75 @@ app.use(function (err, req, res, next) {
 
 module.exports = app;
 Contents of .github/workflows/kubernetes-deploy.yaml:
+name: NodeJs Deployment Workflow
+
+on:
+  push:
+    branches: ["*"]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ (github.ref == 'refs/heads/main' && 'dev') || (github.ref == 'refs/heads/prod' && 'production') }}
+
+    steps:
+      - name: AWS Loggin
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: ${{ secrets.IAM_ROLE }}
+          aws-region: "us-east-1"
+
+      - name: Clone repo
+        uses: actions/checkout@v4
+
+      - name: Login to ECR
+        id: login-to-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Login to EKS
+        run: aws eks update-kubeconfig --region us-east-1 --name project-x-dev
+
+      - name: Create namespace
+        run: kubectl create namespace sample-app || true
+
+      - name: Deploy frontend with Helm
+        run: |
+          helm upgrade --install nodejs-frontend ./helm-chart --values ./helm-chart/values/frontend/dev-value.yaml --namespace sample-app
+        env:
+          HELM_DEBUG: "true"
+
+      - name: Deploy backend with Helm
+        run: |
+          helm upgrade --install nodejs-backend ./helm-chart --values ./helm-chart/values/backend/dev-value.yaml --namespace sample-app
+        env:
+          HELM_DEBUG: "true"
+
+  destroy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: AWS Loggin
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: ${{ secrets.IAM_ROLE }}
+          aws-region: "us-east-1"
+
+      - name: Login to EKS
+        run: aws eks update-kubeconfig --region us-east-1 --name project-x-dev
+
+      - name: Destroy frontend deployment
+        run: helm uninstall nodejs-frontend --namespace sample-app || true
+
+      - name: Destroy backend deployment
+        run: helm uninstall nodejs-backend --namespace sample-app || true
+
+      - name: Delete namespace
+        run: kubectl delete namespace sample-app || true
+
+      - name: Logout from ECR
+        run: aws ecr logout --region us-east-1
 
