@@ -3,7 +3,6 @@ applicationName: nodejs-frontend
 replicaCount: 2
 image:
   repository: 730335359268.dkr.ecr.us-east-1.amazonaws.com/web-frontend
-  tag: 0.1
 pullPolicy: ifNotPresent
 port: 80
 
@@ -13,4 +12,6 @@ service:
   port: 80
 
 ### Ingress
-hostname: vss.click
+ingress:
+  create: true
+  hostname: vss.click
