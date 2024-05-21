@@ -13,4 +13,4 @@ service:
   port: 3000
 
 ### Ingress
-hostname: api.nasibullina.click
+hostname: vss.click
