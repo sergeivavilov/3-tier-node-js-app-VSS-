@@ -1,95 +1,91 @@
-# name of the Workflow
-name: "CI/CD pipeline with a NodeJS app"
+name: NodeJs Deployment Workflow
 
 on:
   push:
-    branches:
-    - main
-    - staging
-    - dev
+    branches: ["*"]
 
 permissions:
-  id-token: write 
-  contents: read 
-
-env:
-  # create new variable with custom dynamic value depending on branch name
-  ENVIRONMENT_STAGE: ${{ (github.ref == 'refs/heads/main' && 'production') || (github.ref == 'refs/heads/staging' && 'staging') || 'dev' }}
+  id-token: write # This is required for requesting the JWT
+  contents: read  # This is required for actions/checkout
 
 jobs:
-  # name of the job
-  build-deploy:
-    # where to run the job, if GHA runner - just specify image name
+  deploy:
     runs-on: ubuntu-latest
-    environment: ${{ (github.ref == 'refs/heads/main' && 'production') || (github.ref == 'refs/heads/staging' && 'staging') || 'dev' }}
+    # Select environment based on branch pushed
+    environment: ${{ (github.ref == 'refs/heads/main' && 'dev') || (github.ref == 'refs/heads/prod' && 'production') }}
 
-    # any instructions to execute
     steps:
-    - name: Checkout Repository
-      # "uses" allows you to specify ready action names
-      uses: actions/checkout@v4
+      - name: AWS Loggin
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: ${{ secrets.IAM_ROLE }}
+          # role-session-name: kubernetesbot 
+          aws-region: "us-east-1"
 
-    - name: Login to AWS
-      uses: aws-actions/configure-aws-credentials@v3
-      with:
-        role-to-assume: ${{ secrets.IAM_ROLE }}
-        role-session-name: githubactionssession
-        aws-region: "us-east-1"
+      - name: clone repo 
+        uses: actions/checkout@v4
 
-    - name: Login to ECR
-      id: login-to-ecr
-      uses: aws-actions/amazon-ecr-login@v2
+      - name: Login to ECR
+        id: login-to-ecr
+        uses: aws-actions/amazon-ecr-login@v2
 
-    # - name: Build, tag, and push backend docker image to Amazon ECR
-    #   env:
-    #     REGISTRY: ${{ steps.login-to-ecr.outputs.registry }}
-    #     REPOSITORY: nodejs-backend
-    #     IMAGE_TAG: ${{ github.sha }}
-    #   working-directory: ./api/
-    #   run: |
-    #     docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
-    #     docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+      - name: Build, tag, and push frontend docker image to Amazon ECR
+        env:
+          REGISTRY: ${{ steps.login-to-ecr.outputs.registry }}
+          REPOSITORY: nodejsapp
+          IMAGE_TAG: 0.1
+        working-directory: ./web
+        run: |
+          docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
+          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+      
+      # - name: Build, tag, and push Backend docker image to Amazon ECR
+      #   env:
+      #     REGISTRY: ${{ steps.login-to-ecr.outputs.registry }}
+      #     REPOSITORY: apirepo
+      #     IMAGE_TAG: 0.1
+      #   working-directory: ./api
+      #   run: |
+      #     docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
+      #     docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
 
-    # - name: Build, tag, and push frontend docker image to Amazon ECR
-    #   env:
-    #     REGISTRY: ${{ steps.login-to-ecr.outputs.registry }}
-    #     REPOSITORY: nodejs-frontend
-    #     IMAGE_TAG: ${{ github.sha }}
-    #   working-directory: ./web/
-    #   run: |
-    #     docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
-    #     docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+      # login to EKS
+      - name: Login to EKS
+        run: aws eks update-kubeconfig --region us-east-1 --name project-x-dev
 
-    - name: Login to EKS
-      run: |
-        aws eks update-kubeconfig --name project-x-${ENVIRONMENT_STAGE}
+      # creating namespace
+      - name: Create namespace
+        run: kubectl create namespace sample-app || true
 
-    # installing ingress-nginx Helm repository for ingress-controller
-    - name: Add ingress-nginx Helm repository
-      run: |
-        helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
-        helm repo update
-        
-    # installing the ingress-controller
-    - name: Install NGINX Ingress controller
-      run: |
-        helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
-          # --namespace kube-system --create-namespace
+      # Install NGINX ingress controller. repo add nad update lines in testing
+      - name: Install NGINX Ingress Controller
+        run: kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.10.1/deploy/static/provider/cloud/deploy.yaml
 
-    # - name: Deploy Backend to Kubernetes
-    #   env:
-    #     IMAGE_TAG: ${{ github.sha }}
-    #   run: |
-    #     helm upgrade --install api ./helm-chart/ \
-    #       --values ./helm-chart/values/backend/${ENVIRONMENT_STAGE}-values.yaml \
-    #       --set image.tag="$IMAGE_TAG" \
-    #       --namespace nodejs-app --create-namespace
+      # deploy frontend by YAML file
+      - name: deploy frontend and service for it
+        run: kubectl apply -f node-js-app/front.yaml
 
-    # - name: Deploy Frontend to Kubernetes
-    #   env:
-    #     IMAGE_TAG: ${{ github.sha }}
-    #   run: |
-    #     helm upgrade --install web ./helm-chart/ \
-    #       --values ./helm-chart/values/frontend/${ENVIRONMENT_STAGE}-values.yaml \
-    #       --set image.tag="$IMAGE_TAG" \
-    #       --namespace nodejs-app --create-namespace
+      # deploy backend by YAML file
+      - name: deploy backend and service for it
+        run: kubectl apply -f node-js-app/back.yaml
+
+      # deploy database by YAML file
+      - name: deploy database and service for it
+        run: kubectl apply -f node-js-app/database.yaml
+
+      # deploy services and ingress by YAML file
+      - name: ingress rules
+        run: kubectl apply -f node-js-app/ingress.yaml
+
+      # deploy frontend      
+      # - name: Deploy frontend
+      #   run: helm upgrade --install node-js-app ./node-js-app/ --values ./node-js-app/values/frontend.yaml --namespace sample-app
+
+      # run backend pod   
+      # - name: Deploy backend
+      #   run: |
+      #     helm upgrade --install node-js-api ./node-js-app/ --values ./node-js-app/values/backend.yaml --namespace sample-app
+
+      # apply service file through kubectl apply 
+      # apply ingress rules file through kubectl apply
+      # see what happens
