@@ -26,5 +26,3 @@ node 16 or higher
 These two variables need to be set
 
 ## Expected UI page all components are working: Frontend => Backend => DB
-
-![Frontend-expected-UI](https://github.com/312-bc/3-tier-node-js-app-23C/assets/43100287/a1d2dc62-1f34-4c75-8688-77269b4f381e)
