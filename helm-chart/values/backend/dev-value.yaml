@@ -1,0 +1,16 @@
+### Deploy
+applicationName: nodejs-backend
+replicaCount: 2
+image:
+  repository: 730335359268.dkr.ecr.us-east-1.amazonaws.com/api-backend
+pullPolicy: ifNotPresent
+port: 3000
+
+### Service
+service:
+  type: ClusterIP
+  port: 3000
+
+### Ingress
+ingress:
+  create: false

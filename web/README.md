@@ -26,5 +26,3 @@ node 16 or higher
 These two variables need to be set
 
 ## Expected UI page all components are working: Frontend => Backend => DB
-
-![Frontend-expected-UI](297135063-a1d2dc62-1f34-4c75-8688-77269b4f381e.png)

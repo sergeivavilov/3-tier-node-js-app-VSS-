@@ -1,0 +1,38 @@
+name: NodeJs Deployment Workflow
+
+on:
+  push:
+    branches: ["*"]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  destroy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: AWS Login
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: ${{ secrets.IAM_ROLE }}
+          aws-region: "us-east-1"
+
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Login to EKS
+        run: aws eks update-kubeconfig --region us-east-1 --name project-x-dev
+
+      - name: Destroy frontend deployment
+        run: helm uninstall nodejs-frontend --namespace sample-app || true
+
+      - name: Destroy backend deployment
+        run: helm uninstall nodejs-backend --namespace sample-app || true
+
+      - name: Delete namespace
+        run: kubectl delete namespace sample-app || true
+
+      - name: Logout from ECR
+        run: aws ecr logout --region us-east-1

@@ -1,0 +1,17 @@
+### Deploy
+applicationName: nodejs-frontend
+replicaCount: 2
+image:
+  repository: 730335359268.dkr.ecr.us-east-1.amazonaws.com/web-frontend
+pullPolicy: ifNotPresent
+port: 80
+
+### Service
+service:
+  type: ClusterIP
+  port: 80
+
+### Ingress
+ingress:
+  create: true
+  hostname: vss.click
