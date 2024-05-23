@@ -1,0 +1,25 @@
+applicationName: nodejs-backend
+replicaCount: 2
+image:
+  repository: 730335359268.dkr.ecr.us-east-1.amazonaws.com/apirepo
+  tag: 0.1
+pullPolicy: ifNotPresent
+port: 3000
+
+env:
+  name: "DB_ENDPOINT"
+  key: vssdatabase.cf42a02yquzi.us-east-1.rds.amazonaws.com:5432
+  # - name: DB_NAME
+  #   key: eksdatabase
+  # - name: DB_USERNAME
+  #   key: vss
+  # - name: username
+  #   key: vss
+  # - name: password
+  #   key: GkTj]aEA_R1Z]8x97j0I0Nuqf8HO
+service:
+  type: ClusterIP
+  port: 3000
+
+ingress:
+  create: false
