@@ -1,0 +1,89 @@
+
+name: NodeJs Deployment Workflow
+
+on:
+  # Triggers the workflow on push or pull request events but only for the "main" branch
+  push:
+    branches: ["*"]
+
+permissions:
+  id-token: write # This is required for requesting the JWT
+  contents: read  # This is required for actions/checkout
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # Select environment based on branch pushed
+    environment: ${{ (github.ref == 'refs/heads/main' && 'dev') || (github.ref == 'refs/heads/prod' && 'production') }}
+
+    steps:
+      - name: AWS Loggin
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: ${{ secrets.IAM_ROLE }}
+          # role-session-name: kubernetesbot 
+          aws-region: "us-east-1"
+
+      - name: clone repo 
+        uses: actions/checkout@v4
+
+      - name: Login to ECR
+        id: login-to-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+# commment out to speed up jobs and to not replicate images over and over again
+      - name: Build, tag, and push frontend docker image to Amazon ECR
+        env:
+          REGISTRY: ${{ steps.login-to-ecr.outputs.registry }}
+          REPOSITORY: nodejsapp
+          IMAGE_TAG: 0.1
+        working-directory: ./web
+        run: |
+          docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
+          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+      
+      - name: Build, tag, and push Backend docker image to Amazon ECR
+        env:
+          REGISTRY: ${{ steps.login-to-ecr.outputs.registry }}
+          REPOSITORY: apirepo
+          IMAGE_TAG: 0.1
+        working-directory: ./api
+        run: |
+          docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
+          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+
+# login to EKS
+      - name: Login to EKS
+        run: aws eks update-kubeconfig --region us-east-1 --name project-x-dev
+
+# creating namespace
+      - name: Create namespace
+        run: kubectl create namespace sample-app || true
+
+
+# Install NGINX ingress controller. repo add nad update lines in testing
+      - name: Install NGINX Ingress Controller
+        run: kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.10.1/deploy/static/provider/cloud/deploy.yaml
+      
+      # IMPORTANT BLYAT run only on first setup
+      # Wait for the Ingress Controller to be ready !!!!!
+      - name: Wait for Ingress Controller to be ready
+        run: |
+          kubectl rollout status deployment ingress-nginx-controller --namespace ingress-nginx --timeout=150s
+
+# deploy frontendwith Helm     
+      - name: Deploy Frontend to Kubernetes
+        run: |
+         helm upgrade --install front ./Helm/ --values ./Helm/values/front.yaml \
+         --set image.repository=730335359268.dkr.ecr.us-east-1.amazonaws.com/nodejsapp \
+         --set image.tag=0.1 --namespace sample-app
+
+# run backend pod with Helm 
+      - name: Deploy Backend to Kubernetes
+        run: |
+         helm upgrade --install back ./Helm/ --values ./Helm/values/back.yaml \
+         --set image.repository=730335359268.dkr.ecr.us-east-1.amazonaws.com/apirepo \
+         --set image.tag=0.1 --namespace sample-app
+
+# see what happens
+      
