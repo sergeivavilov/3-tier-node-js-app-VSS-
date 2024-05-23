@@ -1,1 +1,695 @@
+Directory Structure:
+.
+├── Helm
+│   ├── Chart.yaml
+│   ├── templates
+│   │   ├── deployment.yaml
+│   │   ├── ingress rule.yaml
+│   │   └── service.yaml
+│   └── values
+│       ├── back.yaml
+│       └── front.yaml
+├── README.md
+├── all_project_contents.txt
+├── api
+│   ├── Dockerfile
+│   ├── README.md
+│   ├── app.js
+│   ├── bin
+│   │   └── www
+│   ├── package-lock.json
+│   └── package.json
+├── compose.yaml
+├── ingress.yaml
+└── web
+    ├── Dockerfile
+    ├── README.md
+    ├── app.js
+    ├── bin
+    │   └── www
+    ├── package-lock.json
+    ├── package.json
+    ├── public
+    │   └── stylesheets
+    │       └── style.css
+    ├── routes
+    │   └── index.js
+    └── views
+        ├── error.jade
+        ├── index.jade
+        └── layout.jade
 
+12 directories, 27 files
+
+./ingress.yaml
+Contents of ./ingress.yaml:
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: nginx-ingress-clusterrole
+rules:
+- apiGroups:
+    - ""
+    - "extensions"
+  resources:
+    - "configmaps"
+    - "endpoints"
+    - "events"
+    - "ingresses"
+    - "ingresses/status"
+    - "services"
+  verbs:
+    - "create"
+    - "get"
+    - "list"
+    - "update"
+    - "watch"
+    - "delete"
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: nginx-ingress-clusterrolebinding
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: ingress-nginx  # Replace with your desired namespace
+roleRef:
+  kind: ClusterRole
+  name: nginx-ingress-clusterrole  # Name of the ClusterRole created earlier
+  apiGroup: rbac.authorization.k8s.io
+
+./web/README.md
+Contents of ./web/README.md:
+# Devops Web App
+
+## install the node packages for the web tier
+
+```
+npm 8 or higher
+node 16 or higher
+```
+
+
+```sh
+  npm install
+```
+
+## start the app
+
+```sh
+  npm start
+```
+
+## NOTE this app uses two env variables
+
+- PORT: optional variable to specify the listening PORT. Default is 3000
+- API_HOST: the full url to call the API app (syntax: `http://BACKEND_HOSTNAME:BACKEND_PORT`)
+
+These two variables need to be set
+
+## Expected UI page all components are working: Frontend => Backend => DB
+
+![Frontend-expected-UI](https://github.com/312-bc/3-tier-node-js-app-23C/assets/43100287/a1d2dc62-1f34-4c75-8688-77269b4f381e)
+
+./web/public/stylesheets/style.css
+Contents of ./web/public/stylesheets/style.css:
+body {
+  padding: 50px;
+  font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
+}
+
+a {
+  color: #00B7FF;
+}
+
+./web/package.json
+Contents of ./web/package.json:
+{
+  "name": "web",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node ./bin/www"
+  },
+  "dependencies": {
+    "body-parser": "~1.13.2",
+    "cookie-parser": "~1.3.5",
+    "debug": "~2.6.9",
+    "express": "~4.13.1",
+    "jade": "~1.11.0",
+    "morgan": "~1.6.1",
+    "redis": "^1.0.0",
+    "redis-url": "^1.2.1",
+    "serve-favicon": "~2.3.0",
+    "request": "2.72.0"
+  }
+}
+
+./web/routes/index.js
+Contents of ./web/routes/index.js:
+var express = require('express');
+var router = express.Router();
+var request = require('request');
+
+ var api_url = process.env.API_HOST + '/api/status';
+
+/* GET home page. */
+router.get('/', function (req, res, next) {
+    request({
+        method: 'GET',
+        url: api_url,
+        json: true
+    },
+        function (error, response, body) {
+            if (error || response.statusCode !== 200) {
+                return res.status(500).send('error running request to ' + api_url);
+            } else {
+                res.render('index', {
+                    title: 'Frontend - Hi upcoming DevOps Engineers, how is hands-on?',
+                    request_uuid: body.request_uuid,
+                    time: body.time
+                });
+            }
+        }
+    );
+});
+
+module.exports = router;
+./web/app.js
+Contents of ./web/app.js:
+var express = require('express');
+var path = require('path');
+var favicon = require('serve-favicon');
+var logger = require('morgan');
+var cookieParser = require('cookie-parser');
+var bodyParser = require('body-parser');
+
+var routes = require('./routes/index');
+
+var app = express();
+
+// view engine setup
+app.set('views', path.join(__dirname, 'views'));
+app.set('view engine', 'jade');
+
+// uncomment after placing your favicon in /public
+//app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
+app.use(logger('dev'));
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(cookieParser());
+app.use(express.static(path.join(__dirname, 'public')));
+
+app.use('/', routes);
+
+// catch 404 and forward to error handler
+app.use(function(req, res, next) {
+  var err = new Error('Not Found');
+  err.status = 404;
+  next(err);
+});
+
+// error handlers
+
+// development error handler
+// will print stacktrace
+if (app.get('env') === 'development') {
+  app.use(function(err, req, res, next) {
+    res.status(err.status || 500);
+    res.render({
+      message: err.message,
+      error: err
+    });
+  });
+}
+
+// production error handler
+// no stacktraces leaked to user
+app.use(function(err, req, res, next) {
+  res.status(err.status || 500);
+  res.render({
+    message: err.message,
+    error: {}
+  });
+});
+
+
+module.exports = app;
+
+./README.md
+Contents of ./README.md:
+
+
+./.github/workflows/kubernetes-deploy.yaml
+Contents of ./.github/workflows/kubernetes-deploy.yaml:
+
+name: NodeJs Deployment Workflow
+
+on:
+  # Triggers the workflow on push or pull request events but only for the "main" branch
+  push:
+    branches: ["*"]
+
+permissions:
+  id-token: write # This is required for requesting the JWT
+  contents: read  # This is required for actions/checkout
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # Select environment based on branch pushed
+    environment: ${{ (github.ref == 'refs/heads/main' && 'dev') || (github.ref == 'refs/heads/prod' && 'production') }}
+
+    steps:
+      - name: AWS Loggin
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: ${{ secrets.IAM_ROLE }}
+          # role-session-name: kubernetesbot 
+          aws-region: "us-east-1"
+
+      - name: clone repo 
+        uses: actions/checkout@v4
+
+      - name: Login to ECR
+        id: login-to-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+# commment out to speed up jobs and to not replicate images over and over again
+      - name: Build, tag, and push frontend docker image to Amazon ECR
+        env:
+          REGISTRY: ${{ steps.login-to-ecr.outputs.registry }}
+          REPOSITORY: nodejsapp
+          IMAGE_TAG: 0.1
+        working-directory: ./web
+        run: |
+          docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
+          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+      
+      - name: Build, tag, and push Backend docker image to Amazon ECR
+        env:
+          REGISTRY: ${{ steps.login-to-ecr.outputs.registry }}
+          REPOSITORY: apirepo
+          IMAGE_TAG: 0.1
+        working-directory: ./api
+        run: |
+          docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
+          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+
+# login to EKS
+      - name: Login to EKS
+        run: aws eks update-kubeconfig --region us-east-1 --name project-x-dev
+
+# creating namespace
+      - name: Create namespace
+        run: kubectl create namespace sample-app || true
+
+
+# Install NGINX ingress controller. repo add nad update lines in testing
+      - name: Install NGINX Ingress Controller
+        run: kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.10.1/deploy/static/provider/cloud/deploy.yaml
+      
+      # IMPORTANT BLYAT run only on first setup
+      # Wait for the Ingress Controller to be ready !!!!!
+      - name: Wait for Ingress Controller to be ready
+        run: |
+          kubectl rollout status deployment ingress-nginx-controller --namespace ingress-nginx --timeout=150s
+
+# deploy frontendwith Helm     
+      - name: Deploy Frontend to Kubernetes
+        run: |
+         helm upgrade --install front ./Helm/ --values ./Helm/values/front.yaml \
+         --set image.repository=730335359268.dkr.ecr.us-east-1.amazonaws.com/nodejsapp \
+         --set image.tag=0.1 --namespace sample-app
+
+# run backend pod with Helm 
+      - name: Deploy Backend to Kubernetes
+        run: |
+         helm upgrade --install back ./Helm/ --values ./Helm/values/back.yaml \
+         --set image.repository=730335359268.dkr.ecr.us-east-1.amazonaws.com/apirepo \
+         --set image.tag=0.1 --namespace sample-app
+
+# see what happens
+      
+./compose.yaml
+Contents of ./compose.yaml:
+services:
+  webcontainer:
+    build: web/
+    ports:
+      - "80:80"
+    networks:
+      - appnetwork
+    environment:
+      API_HOST: "http://apicontainer:3000"
+  apicontainer:
+    build: api/
+    networks:
+      - appnetwork
+    environment:
+      DB: "postgres://pgadmin:crackers@dbcontainer/sampledb"
+  dbcontainer:
+    image: "postgres:16"
+    environment:
+      POSTGRES_PASSWORD: "crackers"
+      POSTGRES_USER: "pgadmin"
+      POSTGRES_DB: "sampledb"
+    networks:
+      - appnetwork
+networks:
+  appnetwork:
+
+
+./api/README.md
+Contents of ./api/README.md:
+# Devops API App
+
+# System Requirements
+
+```
+npm 8 or higher
+node 16 or higher
+```
+
+## install the node packages for the api tier
+
+```sh
+→ npm install
+```
+
+## start the app
+
+```sh
+→ npm start
+```
+
+## NOTE this app uses two env variables
+
+- PORT: optional variable to specify the listening PORT. Default is 3000
+- DB: the postgresql url (also called as DB Connection string) to connect (syntax: `postgres://DB_USERNAME:DB_PASSWORD@DB_ENDPOINT/DB_NAME`).
+    - DB_NAME should be equal to the database that was created inside the cluster either using `CREATE DATABASE ..` command or `db_name` parameter in Terraform for RDS (https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/db_instance#db_name).
+    - Do not confuse with DB cluster/instance name, which is what shows up on AWS Console as a name for the database instances.
+
+These two variables need to be set
+
+./api/package.json
+Contents of ./api/package.json:
+{
+  "name": "api",
+  "version": "0.0.0",
+  "private": true,
+  "engines" : { 
+    "npm" : ">=8.0.0",
+    "node" : ">=16.0.0"
+  },
+  "scripts": {
+    "start": "node ./bin/www"
+  },
+  "dependencies": {
+    "express": "~4.13.1",
+    "pg": "8.8.0",
+    "node-uuid": "1.4.7"
+  }
+}
+
+./api/app.js
+Contents of ./api/app.js:
+var express = require('express');
+var app = express();
+var uuid = require('node-uuid');
+
+var { Pool } = require('pg');
+
+var conString = "postgres://${dbUsername}:${dbPassword}@${dbEndpoint}/${dbName}"; // "postgres://username:password@localhost/database";
+
+// Routes
+app.get('/api/status', function (req, res) {
+  try {
+    const pool = new Pool({
+      connectionString: conString,
+    });
+    pool.query('SELECT now() as time', [], function (err, result) {
+      //call `done()` to release the client back to the pool
+      if (err) {
+        return res.status(500).send('error running query');
+      }
+
+      return res.json({
+        request_uuid: uuid.v4(),
+        time: result.rows[0].time
+      });
+    });
+
+  } catch (error) {
+    console.log('error:')
+    console.log(error)
+  }
+});
+
+// catch 404 and forward to error handler
+app.use(function (req, res, next) {
+  var err = new Error('Not Found');
+  err.status = 404;
+  next(err);
+});
+
+// error handlers
+
+// development error handler
+// will print stacktrace
+if (app.get('env') === 'development') {
+  app.use(function (err, req, res, next) {
+    res.status(err.status || 500);
+    res.json({
+      message: err.message,
+      error: err
+    });
+  });
+}
+
+// production error handler
+// no stacktraces leaked to user
+app.use(function (err, req, res, next) {
+  res.status(err.status || 500);
+  res.json({
+    message: err.message,
+    error: {}
+  });
+});
+
+
+module.exports = app;
+./Helm/Chart.yaml
+Contents of ./Helm/Chart.yaml:
+apiVersion: v2
+name: helm-chart
+description: A Helm chart for Kubernetes
+version: 0.1.0
+./Helm/values/front.yaml
+Contents of ./Helm/values/front.yaml:
+applicationName: nodejs-frontend
+replicaCount: 2
+image:
+  repository: 730335359268.dkr.ecr.us-east-1.amazonaws.com/nodejsapp
+  tag: 0.1
+pullPolicy: ifNotPresent
+port: 80
+env:
+  key: http://nodejs-backend-svc
+  name: "API_HOST"
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  create: true
+  hostname: vss.click
+./Helm/values/back.yaml
+Contents of ./Helm/values/back.yaml:
+applicationName: nodejs-backend
+replicaCount: 2
+image:
+  repository: 730335359268.dkr.ecr.us-east-1.amazonaws.com/apirepo
+  tag: 0.1
+pullPolicy: ifNotPresent
+port: 3000
+
+env:
+  name: "DB_ENDPOINT"
+  key: vssdatabase.cf42a02yquzi.us-east-1.rds.amazonaws.com:5432
+  # - name: DB_NAME
+  #   key: eksdatabase
+  # - name: DB_USERNAME
+  #   key: vss
+  # - name: username
+  #   key: vss
+  # - name: password
+  #   key: GkTj]aEA_R1Z]8x97j0I0Nuqf8HO
+service:
+  type: ClusterIP
+  port: 3000
+
+ingress:
+  create: false
+./Helm/templates/deployment.yaml
+Contents of ./Helm/templates/deployment.yaml:
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.applicationName }}
+  labels:
+    app: {{ .Values.applicationName }}
+spec:  
+  replicas: {{ .Values.replicaCount }}
+  selector:  
+    matchLabels:
+      app: {{ .Values.applicationName }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.applicationName }}
+    spec:
+      containers:
+        - name: {{ .Values.applicationName }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.port }}
+              protocol: TCP
+          env:
+            - name: "{{ .Values.env.name }}"
+              value: "{{ .Values.env.key }}"
+./Helm/templates/ingress rule.yaml
+Contents of ./Helm/templates/ingress rule.yaml:
+{{- if .Values.ingress.create }} # added so ingress is not created for backend
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: "ingress-{{ .Values.applicationName }}"
+spec:
+  rules:
+  - host: {{ .Values.ingress.hostname }}
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: "{{ .Values.applicationName }}-svc"
+            port: 
+              number: {{ .Values.service.port }}
+  ingressClassName: nginx
+
+
+  {{- end }}
+./Helm/templates/service.yaml
+Contents of ./Helm/templates/service.yaml:
+apiVersion: v1
+kind: Service
+metadata:
+  name: "{{ .Values.applicationName }}-svc"
+  labels:
+    app: {{ .Values.applicationName }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      # targetPort: {{ .Values.service.targetport }} - not needed for ClusterIp
+      protocol: TCP
+      name: http
+  selector:
+    app: {{ .Values.applicationName }}
+Contents of .github/workflows/kubernetes-deploy.yaml:
+
+name: NodeJs Deployment Workflow
+
+on:
+  # Triggers the workflow on push or pull request events but only for the "main" branch
+  push:
+    branches: ["*"]
+
+permissions:
+  id-token: write # This is required for requesting the JWT
+  contents: read  # This is required for actions/checkout
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # Select environment based on branch pushed
+    environment: ${{ (github.ref == 'refs/heads/main' && 'dev') || (github.ref == 'refs/heads/prod' && 'production') }}
+
+    steps:
+      - name: AWS Loggin
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: ${{ secrets.IAM_ROLE }}
+          # role-session-name: kubernetesbot 
+          aws-region: "us-east-1"
+
+      - name: clone repo 
+        uses: actions/checkout@v4
+
+      - name: Login to ECR
+        id: login-to-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+# commment out to speed up jobs and to not replicate images over and over again
+      - name: Build, tag, and push frontend docker image to Amazon ECR
+        env:
+          REGISTRY: ${{ steps.login-to-ecr.outputs.registry }}
+          REPOSITORY: nodejsapp
+          IMAGE_TAG: 0.1
+        working-directory: ./web
+        run: |
+          docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
+          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+      
+      - name: Build, tag, and push Backend docker image to Amazon ECR
+        env:
+          REGISTRY: ${{ steps.login-to-ecr.outputs.registry }}
+          REPOSITORY: apirepo
+          IMAGE_TAG: 0.1
+        working-directory: ./api
+        run: |
+          docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
+          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+
+# login to EKS
+      - name: Login to EKS
+        run: aws eks update-kubeconfig --region us-east-1 --name project-x-dev
+
+# creating namespace
+      - name: Create namespace
+        run: kubectl create namespace sample-app || true
+
+
+# Install NGINX ingress controller. repo add nad update lines in testing
+      - name: Install NGINX Ingress Controller
+        run: kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.10.1/deploy/static/provider/cloud/deploy.yaml
+      
+      # IMPORTANT BLYAT run only on first setup
+      # Wait for the Ingress Controller to be ready !!!!!
+      - name: Wait for Ingress Controller to be ready
+        run: |
+          kubectl rollout status deployment ingress-nginx-controller --namespace ingress-nginx --timeout=150s
+
+# deploy frontendwith Helm     
+      - name: Deploy Frontend to Kubernetes
+        run: |
+         helm upgrade --install front ./Helm/ --values ./Helm/values/front.yaml \
+         --set image.repository=730335359268.dkr.ecr.us-east-1.amazonaws.com/nodejsapp \
+         --set image.tag=0.1 --namespace sample-app
+
+# run backend pod with Helm 
+      - name: Deploy Backend to Kubernetes
+        run: |
+         helm upgrade --install back ./Helm/ --values ./Helm/values/back.yaml \
+         --set image.repository=730335359268.dkr.ecr.us-east-1.amazonaws.com/apirepo \
+         --set image.tag=0.1 --namespace sample-app
+
+# see what happens
+      
