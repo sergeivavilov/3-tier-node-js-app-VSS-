@@ -9,9 +9,8 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  destroy:
     runs-on: ubuntu-latest
-    environment: ${{ (github.ref == 'refs/heads/main' && 'dev') || (github.ref == 'refs/heads/prod' && 'production') }}
 
     steps:
       - name: AWS Login
@@ -22,55 +21,6 @@ jobs:
 
       - name: Checkout repo
         uses: actions/checkout@v4
-
-      - name: Test Placeholder
-        run: echo "Running tests without build and deploy steps"
-
-# Uncomment the following steps for building and deploying when you are ready
-
-#      - name: Login to ECR
-#        id: login-to-ecr
-#        uses: aws-actions/amazon-ecr-login@v2
-#
-#      - name: Build Docker image for frontend
-#        run: |
-#          docker build -t web-frontend:$GITHUB_SHA ./web
-#          docker tag web-frontend:$GITHUB_SHA 730335359268.dkr.ecr.us-east-1.amazonaws.com/web-frontend:$GITHUB_SHA
-#          docker push 730335359268.dkr.ecr.us-east-1.amazonaws.com/web-frontend:$GITHUB_SHA
-#
-#      - name: Build Docker image for backend
-#        run: |
-#          docker build -t api-backend:$GITHUB_SHA ./api
-#          docker tag api-backend:$GITHUB_SHA 730335359268.dkr.ecr.us-east-1.amazonaws.com/api-backend:$GITHUB_SHA
-#          docker push 730335359268.dkr.ecr.us-east-1.amazonaws.com/api-backend:$GITHUB_SHA
-#
-#      - name: Login to EKS
-#        run: aws eks update-kubeconfig --region us-east-1 --name project-x-dev
-#
-#      - name: Create namespace if not exists
-#        run: kubectl create namespace sample-app || true
-#
-#      - name: Deploy frontend with Helm
-#        run: |
-#          helm upgrade --install nodejs-frontend ./helm-chart --values ./helm-chart/values/frontend/dev-value.yaml --namespace sample-app --set image.tag=$GITHUB_SHA --atomic --wait
-#        env:
-#          HELM_DEBUG: "true"
-#
-#      - name: Deploy backend with Helm
-#        run: |
-#          helm upgrade --install nodejs-backend ./helm-chart --values ./helm-chart/values/backend/dev-value.yaml --namespace sample-app --set image.tag=$GITHUB_SHA --atomic --wait
-#        env:
-#          HELM_DEBUG: "true"
-
-  destroy:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: AWS Login
-        uses: aws-actions/configure-aws-credentials@v3
-        with:
-          role-to-assume: ${{ secrets.IAM_ROLE }}
-          aws-region: "us-east-1"
 
       - name: Login to EKS
         run: aws eks update-kubeconfig --region us-east-1 --name project-x-dev
