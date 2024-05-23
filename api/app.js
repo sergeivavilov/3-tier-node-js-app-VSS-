@@ -4,7 +4,7 @@ var uuid = require('node-uuid');
 
 var { Pool } = require('pg');
 
-var conString = process.env.DB; // "postgres://username:password@localhost/database";
+var conString = "postgres://${dbUsername}:${dbPassword}@${dbEndpoint}/${dbName}"; // "postgres://username:password@localhost/database";
 
 // Routes
 app.get('/api/status', function (req, res) {
