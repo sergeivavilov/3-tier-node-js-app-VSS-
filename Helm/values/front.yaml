@@ -1,16 +1,17 @@
 applicationName: nodejs-frontend
-replicaCount: 2
+replicaCount: 1
 image:
   repository: 730335359268.dkr.ecr.us-east-1.amazonaws.com/nodejsapp
   tag: 0.1
 pullPolicy: ifNotPresent
 port: 80
 env:
-  key: http://nodejs-backend-svc
-  name: "API_HOST"
+  name: API_HOST
+  value: "http://nodejs-backend-svc:3000"
 service:
   type: ClusterIP
   port: 80
+  targetport: 80
 
 ingress:
   create: true
