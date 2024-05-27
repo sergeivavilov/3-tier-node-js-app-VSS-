@@ -16,6 +16,4 @@ spec:
             port: 
               number: {{ .Values.service.port }}
   ingressClassName: nginx
-
-
   {{- end }}
