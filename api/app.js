@@ -4,7 +4,7 @@ var uuid = require('node-uuid');
 
 var { Pool } = require('pg');
 
-var conString = "postgres://${dbUsername}:${dbPassword}@${dbEndpoint}/${dbName}"; // "postgres://username:password@localhost/database";
+var conString = process.env.DB; //  "postgres://vss:Cxj[c4}7jeNdP]-3h<3Sho2-o9<?@vssdatabase.cf42a02yquzi.us-east-1.rds.amazonaws.com:5432/eksdatabase"
 
 // Routes
 app.get('/api/status', function (req, res) {
