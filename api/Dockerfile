@@ -14,4 +14,6 @@ ENV PORT=3000
 EXPOSE 3000
 
 # start the app when container launches
-CMD npm start
+# testing this line because of chatgpt
+CMD ["npm", "start"] 
+# CMD npm start
