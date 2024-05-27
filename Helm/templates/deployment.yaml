@@ -24,4 +24,4 @@ spec:
               protocol: TCP
           env:
             - name: "{{ .Values.env.name }}"
-              value: "{{ .Values.env.key }}"
+              value: "{{ .Values.env.value }}"
