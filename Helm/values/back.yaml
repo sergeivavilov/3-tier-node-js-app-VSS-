@@ -7,19 +7,15 @@ pullPolicy: ifNotPresent
 port: 3000
 
 env:
-  name: "DB_ENDPOINT"
-  key: vssdatabase.cf42a02yquzi.us-east-1.rds.amazonaws.com:5432
-  # - name: DB_NAME
-  #   key: eksdatabase
-  # - name: DB_USERNAME
-  #   key: vss
-  # - name: username
-  #   key: vss
-  # - name: password
-  #   key: GkTj]aEA_R1Z]8x97j0I0Nuqf8HO
+  name: DB 
+  value: postgres://vss:Cxj%5Bc4%7D7jeNdP%5D-3h%3C3Sho2-o9%3C%3F@vssdatabase.cf42a02yquzi.us-east-1.rds.amazonaws.com:5432/eksdatabase
+
+  # 'postgresql://vss:Cxj[c4}7jeNdP]-3h<3Sho2-o9<?@vssdatabase.cf42a02yquzi.us-east-1.rds.amazonaws.com:5432/eksdatabase'
+
 service:
   type: ClusterIP
   port: 3000
+  targetport: 3000
 
 ingress:
   create: false
